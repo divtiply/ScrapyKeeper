@@ -4,6 +4,7 @@ import numpy as np
 import re
 from sqlalchemy import desc
 from ScrapyKeeper.app import db, Base
+from ScrapyKeeper.app.spider import helper
 
 
 class Project(Base):
@@ -264,10 +265,12 @@ class JobExecution(Base):
                     duration = (job_execution.end_time - job_execution.start_time).total_seconds()
                 dico = job_execution.to_dict()
                 if dico['job_instance'] != {}:
-                    if dico['job_instance']['spider_name'] in result.keys():
-                        result[dico['job_instance']['spider_name']] += duration
+                    spider_name = helper.prepare_spider_name(dico['job_instance']['spider_name'])
+
+                    if spider_name in result.keys():
+                        result[spider_name] += duration
                     else :
-                        result[dico['job_instance']['spider_name']] = duration
+                        result[spider_name] = duration
         result_sorted = {}
         for key in sorted(result.keys()): result_sorted[key] = result[key]
         return result_sorted
@@ -276,7 +279,9 @@ class JobExecution(Base):
     def list_last_run(cls, project_id):
         result = []
         for job_execution in JobExecution.query.filter_by(project_id=project_id).order_by(desc(JobExecution.id)).limit(15).all():
-            result.append(job_execution.to_dict())
+            item = job_execution.to_dict()
+            item.get('job_instance')['spider_name'] = helper.prepare_spider_name(item.get('job_instance')['spider_name'])
+            result.append(item)
         result.reverse()
         return result
 
@@ -290,14 +295,17 @@ class JobExecution(Base):
             # Errors, Retry, Exceptions, Bytes, Cache Size
             stream = np.array([ dico['errors_count'], dico['retries_count'], dico['exceptions_count'],
                                 dico['warnings_count'], dico['bytes_count'], dico['cache_size_count'] ])
+
+
             if dico['job_instance'] != {}:
-                if dico['job_instance']['spider_name'] in result.keys():
-                    if iteration[dico['job_instance']['spider_name']] < 10 :
-                        iteration[dico['job_instance']['spider_name']] += 1
-                        result[dico['job_instance']['spider_name']] += stream
+                spider_name = helper.prepare_spider_name(dico['job_instance']['spider_name'])
+                if spider_name in result.keys():
+                    if iteration[spider_name] < 10 :
+                        iteration[spider_name] += 1
+                        result[spider_name] += stream
                 else :
-                    iteration[dico['job_instance']['spider_name']] = 1
-                    result[dico['job_instance']['spider_name']] = stream
+                    iteration[spider_name] = 1
+                    result[spider_name] = stream
         total = np.array([.01, .01, .01, .01, .01, .01])
         # average ratio
         for i in result.keys():
@@ -342,7 +350,7 @@ class JobExecution(Base):
         job_instances = []
         for job_instance in JobInstance.query.filter_by(spider_name=spider_name).order_by(desc(JobInstance.id)).limit(10).all():
             job_instances.append(job_instance.id)
-        for job_execution in JobExecution.query.filter(JobExecution.job_instance_id.in_(job_instances)).order_by(desc(JobExecution.id)).all() :
+        for job_execution in JobExecution.query.filter_by(running_status=SpiderStatus.FINISHED).filter(JobExecution.job_instance_id.in_(job_instances)).order_by(desc(JobExecution.id)).all() :
             result.append(job_execution.to_dict())
         result.reverse()
         return result
@@ -394,3 +402,24 @@ class JobExecution(Base):
                 hour_key = job_execution.create_time.strftime('%Y-%m-%d %H:00:00')
                 result[hour_key] += job_execution.items_count
         return [dict(key=hour_key, value=result[hour_key]) for hour_key in hour_keys]
+
+    @classmethod
+    def get_last_execution_by_spider(self, spider_name):
+        sql = """
+           SELECT s.id, e.items_count
+            FROM sk_job_instance AS i
+            JOIN sk_job_execution AS e ON i.id = e.job_instance_id
+            JOIN sk_spider AS s on i.spider_name = s.spider_name
+            WHERE i.spider_name = :name AND e.running_status = :status
+            ORDER BY i.id DESC
+            LIMIT 10
+        """
+
+        result = []
+        spider_id = None
+
+        for row in db.engine.execute(sql, {'name': spider_name, 'status': SpiderStatus.FINISHED}):
+            result.append(row[1])
+            spider_id = row[0]
+
+        return spider_id, result

@@ -14,6 +14,7 @@ from flask_restful_swagger import swagger
 from werkzeug.utils import secure_filename
 
 from ScrapyKeeper.app import db, api, agent, app
+from ScrapyKeeper.app.spider import helper
 from ScrapyKeeper.app.spider.model import JobInstance, Project, JobExecution, SpiderInstance, JobRunType
 
 api_spider_bp = Blueprint('spider', __name__)
@@ -532,7 +533,46 @@ def project_manage():
 
 @app.route("/project/<project_id>/job/dashboard")
 def job_dashboard(project_id):
-    return render_template("job_dashboard.html", job_status=JobExecution.list_jobs(project_id))
+
+    jobs = JobExecution.list_jobs(project_id)
+    unique_spiders = []
+
+    for job in jobs['COMPLETED']:
+        instance = job['job_instance']
+        spider_name = instance.get('spider_name')
+        if spider_name and spider_name not in unique_spiders:
+            unique_spiders.append(spider_name)
+
+    spider_colours = {}
+
+    for spider_name in unique_spiders:
+        spider_id, old_items_count = JobExecution.get_last_execution_by_spider(spider_name)
+        if not old_items_count:
+            spider_colours[spider_name] = {
+                'colour': None,
+                'spider_id': spider_id
+            }
+            continue
+
+        last_items_count = old_items_count.pop(0)
+        (min_items_count, average_items_count, max_items_count) = _compute_item_stats(old_items_count, last_items_count)
+        max_warning_interval = max_items_count * 1.5
+
+        colour = None
+
+        if 0 <= last_items_count <= min_items_count:
+            colour = 'danger'
+        elif min_items_count < last_items_count <= max_items_count:
+            colour = 'success'
+        else:
+            colour = 'warning'
+
+        spider_colours[spider_name] = {
+            'colour': colour,
+            'spider_id': spider_id
+        }
+
+    return render_template("job_dashboard.html", job_status=jobs, spider_colours = spider_colours)
 
 
 @app.route("/project/<project_id>/job/periodic")
@@ -705,6 +745,10 @@ def project_stats(project_id, spider_id):
     if spider_id == "project":
         project = Project.find_project_by_id(project_id)
         spider = SpiderInstance.query.filter_by(project_id=project_id).all()
+
+        for item in spider:
+            item.spider_name = helper.prepare_spider_name(item.spider_name)
+
         working_time = JobExecution.list_working_time(project_id)
         last_run = JobExecution.list_last_run(project_id)
         quality_review = JobExecution.list_quality_review(project_id)
@@ -804,24 +848,7 @@ def project_stats(project_id, spider_id):
             max_items_count = 100
             average_items_count = 50
         else:
-            items_not_null = []
-            for i in old_items_count:
-                if i != 0:
-                    items_not_null.append(i)
-            if len(items_not_null) == 0: items_not_null = [0]
-            min_items_count = min(items_not_null)
-            if len(old_items_count) == 0:
-                max_items_count = last_items_count
-            else:
-                max_items_count = max(old_items_count)
-            average_items_count = sum(items_not_null) / len(items_not_null)
-            if max_items_count == 0:
-                min_items_count = 0
-            else:
-                if (min_items_count / max_items_count) > 0.8:
-                    min_items_count = max_items_count * 0.8
-                if (average_items_count / max_items_count) > 0.95 or max_items_count == last_items_count:
-                    max_items_count = average_items_count * 1.05
+            (min_items_count, average_items_count, max_items_count) = _compute_item_stats(old_items_count, last_items_count)
 
         return render_template("spider_stats.html", spider=spider, start_time=start_time, end_time=end_time,
                                end_time_short=end_time_short, duration_time=duration_time,
@@ -833,3 +860,26 @@ def project_stats(project_id, spider_id):
                                bytes_count=bytes_count, retries_count=retries_count, exceptions_count=exceptions_count,
                                exceptions_size=exceptions_size,
                                cache_size_count=cache_size_count, cache_object_count=cache_object_count)
+
+
+def _compute_item_stats(old_items_count, last_items_count):
+    items_not_null = []
+    for i in old_items_count:
+        if i != 0:
+            items_not_null.append(i)
+    if len(items_not_null) == 0: items_not_null = [0]
+    min_items_count = min(items_not_null)
+    if len(old_items_count) == 0:
+        max_items_count = last_items_count
+    else:
+        max_items_count = max(old_items_count)
+    average_items_count = sum(items_not_null) / len(items_not_null)
+    if max_items_count == 0:
+        min_items_count = 0
+    else:
+        if (min_items_count / max_items_count) > 0.8:
+            min_items_count = max_items_count * 0.8
+        if (average_items_count / max_items_count) > 0.95 or max_items_count == last_items_count:
+            max_items_count = average_items_count * 1.05
+
+    return min_items_count, average_items_count, max_items_count

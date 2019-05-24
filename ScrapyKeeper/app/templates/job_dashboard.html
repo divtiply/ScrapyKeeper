@@ -162,10 +162,11 @@
             </tr>
             {% for job in job_status.COMPLETED %}
             {% if job.job_instance %}
-            <tr class="{% if job.has_errors %}danger{% elif job.has_warnings %}warning{% endif %}">
+<!--            <tr class="{% if job.has_errors %}danger{% elif job.has_warnings %}warning{% endif %}">-->
+            <tr class="{{ spider_colours.get(job.job_instance.spider_name).colour }}">
                 <td>{{ job.job_execution_id }}</td>
                 <td><a href="/project/{{ project.id }}/job/periodic#{{ job.job_instance_id }}">{{ job.job_instance_id }}</a></td>
-                <td>{{ job.job_instance.spider_name }}</td>
+                <td><a target="_blank" href="/project/{{ project.id }}/{{ spider_colours.get(job.job_instance.spider_name).spider_id }}/stats"> {{ job.job_instance.spider_name }} </a></td>
                 <td class="txt-args" data-toggle="tooltip" data-placement="right"
                     title="{{ job.job_instance.spider_arguments }}">{{ job.job_instance.spider_arguments }}
                 </td>

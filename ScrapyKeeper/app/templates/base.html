@@ -82,7 +82,6 @@
 
         </nav>
     </header>
-
     <!-- =============================================== -->
 
     <!-- Left side column. contains the sidebar -->
@@ -112,10 +111,24 @@
                 <li class="header">PROJECT</li>
                 <li><a href="/project/{{ project.id }}/project/stats"><i class="fa  fa-area-chart text-gray"></i> <span>Project Stats</span></a>
                 </li>
-                {% for spider in spider_list %}
-                    <li><a href="/project/{{ project.id }}/{{ spider.spider_instance_id }}/stats"><i class="fa fa-align-left text-yellow"></i> <span>Spider {{ spider.spider_name }}</span></a>
-                    </li>
-                {% endfor %}
+                <li>
+                    <a href="#" id="spiders-toggle"  data-toggle="collapse" data-target="#collapse-spiders"
+                       aria-expanded="true" aria-controls="collapse-spiders">
+                        <i class="fa fa-align-left text-yellow"></i>
+                        <span>Spiders</span>
+                    </a>
+
+                    <ul id="collapse-spiders" class="nav collapse" aria-labelledby="spiders-toggle">
+                        {% for spider in spider_list %}
+                        <li>
+                            <a href="/project/{{ project.id }}/{{ spider.spider_instance_id }}/stats">
+                                <i class="fa fa-align-left text-blue"></i>
+                                <span>{{ spider.spider_name }}</span>
+                            </a>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </li>
                 <!--<li><a href="#"><i class="fa fa-circle-o text-red"></i> <span>Members</span></a></li>-->
                 <li><a href="/project/manage"><i class="fa fa-gears text-red"></i> <span>Manage</span></a></li>
                 <li class="header">SERVER</li>
