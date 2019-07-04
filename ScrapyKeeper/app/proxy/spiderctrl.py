@@ -157,10 +157,10 @@ class SpiderAgent():
             for i in range(threshold):
                 leaders.append(random.choice(candidates))
         for leader in leaders:
-            serviec_job_id = leader.start_spider(project.project_name, spider_name, arguments)
+            service_job_id = leader.start_spider(project.project_name, spider_name, arguments)
             job_execution = JobExecution()
             job_execution.project_id = job_instance.project_id
-            job_execution.service_job_execution_id = serviec_job_id
+            job_execution.service_job_execution_id = service_job_id
             job_execution.job_instance_id = job_instance.id
             job_execution.create_time = datetime.datetime.now()
             job_execution.running_on = leader.server

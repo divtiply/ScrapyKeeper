@@ -441,8 +441,7 @@ def intercept_no_project():
 
 @app.context_processor
 def inject_common():
-    return dict(now=datetime.datetime.now(),
-                servers=agent.servers)
+    return dict(now=datetime.datetime.now(), servers=agent.servers)
 
 
 @app.context_processor
@@ -557,8 +556,6 @@ def job_dashboard(project_id):
         last_items_count = old_items_count.pop(0)
         (min_items_count, average_items_count, max_items_count) = _compute_item_stats(old_items_count, last_items_count)
         max_warning_interval = max_items_count * 1.5
-
-        colour = None
 
         if 0 <= last_items_count <= min_items_count:
             colour = 'danger'
