@@ -33,7 +33,10 @@ LOG_LEVEL = 'INFO'
 
 # spider services
 SERVER_TYPE = 'scrapyd'
-SERVERS = ['http://localhost:6800']
+
+servers_string = os.getenv('SERVERS', '')
+servers_list = [s.strip() for s in servers_string.split(',')]
+SERVERS = servers_list or ['http://localhost:6800']
 
 # basic auth
 NO_AUTH = False
