@@ -128,7 +128,16 @@ class SpiderAgent():
             # commit
             db.session.commit()
 
+    def _spider_already_running(self, spider_name):
+        running_jobs = JobExecution.get_running_jobs_by_spider_name(spider_name)
+
+        return len(running_jobs) > 0
+
     def start_spider(self, job_instance):
+        # prevent jobs overlapping for the same spider
+        if not job_instance.overlapping and self._spider_already_running(job_instance.spider_name):
+            return
+
         project = Project.find_project_by_id(job_instance.project_id)
         spider_name = job_instance.spider_name
         #arguments = {}

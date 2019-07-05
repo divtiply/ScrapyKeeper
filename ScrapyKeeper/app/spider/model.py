@@ -119,6 +119,7 @@ class JobInstance(Base):
     cron_month = db.Column(db.String(20), default="*")
     enabled = db.Column(db.INTEGER, default=0)  # 0/-1
     run_type = db.Column(db.String(20))  # periodic/onetime
+    overlapping = db.Column(db.BOOLEAN, default=True)
 
     def to_dict(self):
         return dict(
@@ -134,7 +135,8 @@ class JobInstance(Base):
             cron_day_of_week=self.cron_day_of_week,
             cron_month=self.cron_month,
             enabled=self.enabled == 0,
-            run_type=self.run_type
+            run_type=self.run_type,
+            overlapping = self.overlapping
 
         )
 
@@ -423,3 +425,11 @@ class JobExecution(Base):
             spider_id = row[0]
 
         return spider_id, result
+
+    @classmethod
+    def get_running_jobs_by_spider_name(self, spider_name):
+        return JobExecution.query \
+            .join(JobInstance, JobExecution.job_instance_id == JobInstance.id) \
+            .filter(JobExecution.running_status == SpiderStatus.RUNNING,
+                    JobInstance.spider_name == spider_name
+            ).all()

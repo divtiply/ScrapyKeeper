@@ -629,6 +629,7 @@ def job_addlist(project_id):
         job_instance.spider_arguments = request.form['spider_arguments']
         job_instance.priority = request.form.get('priority', 0)
         job_instance.run_type = request.form['run_type']
+        job_instance.overlapping = request.form.get('overlapping', False)
         # chose daemon manually
         if request.form['daemon'] != 'auto':
             spider_args = []
@@ -702,6 +703,13 @@ def job_switch(project_id, job_instance_id):
     db.session.commit()
     return redirect(request.referrer, code=302)
 
+
+@app.route("/project/<project_id>/job/<job_instance_id>/switch-overlapping")
+def job_switch_overlapping(project_id, job_instance_id):
+    job_instance = JobInstance.query.filter_by(project_id=project_id, id=job_instance_id).first()
+    job_instance.overlapping = True if not job_instance.overlapping else False
+    db.session.commit()
+    return redirect(request.referrer, code=302)
 
 @app.route("/project/<project_id>/spider/dashboard")
 def spider_dashboard(project_id):
