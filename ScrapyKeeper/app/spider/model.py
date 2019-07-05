@@ -119,7 +119,7 @@ class JobInstance(Base):
     cron_month = db.Column(db.String(20), default="*")
     enabled = db.Column(db.INTEGER, default=0)  # 0/-1
     run_type = db.Column(db.String(20))  # periodic/onetime
-    overlapping = db.Column(db.BOOLEAN, default=True)
+    overlapping = db.Column(db.BOOLEAN, default=False)
 
     def to_dict(self):
         return dict(

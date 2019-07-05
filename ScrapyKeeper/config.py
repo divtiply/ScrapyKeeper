@@ -35,7 +35,7 @@ LOG_LEVEL = 'INFO'
 SERVER_TYPE = 'scrapyd'
 
 servers_string = os.getenv('SERVERS', '')
-servers_list = [s.strip() for s in servers_string.split(',')]
+servers_list = [s.strip() for s in servers_string.split(',') if s]
 SERVERS = servers_list or ['http://localhost:6800']
 
 # basic auth
