@@ -24,6 +24,7 @@ RUN set -xe \
                           zlib1g \
                           zlib1g-dev \
                           sqlite3 \
+                          libmysqlclient-dev \
     && curl -sSL https://bootstrap.pypa.io/get-pip.py | python3 \
     && pip install git+https://github.com/scrapy/scrapyd.git \
                    git+https://github.com/scrapy/scrapyd-client.git \

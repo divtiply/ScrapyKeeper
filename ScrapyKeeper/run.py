@@ -54,7 +54,7 @@ def parse_opts(config):
                       action='append',
                       default=[])
     parser.add_option("--database-url",
-                      help='ScrapyKeeper metadata database default: %s' % config.get('SQLALCHEMY_DATABASE_URI'),
+                      help='ScrapyKeeper metadata database should have the follosing structure: mysql://username:password@server/db',
                       dest='database_url',
                       default=config.get('SQLALCHEMY_DATABASE_URI'))
 
