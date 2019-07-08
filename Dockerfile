@@ -44,7 +44,6 @@ RUN set -xe \
                                       libjpeg-turbo8-dev \
                                       liblcms2-dev \
                                       libwebp-dev \
-                                      zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
 ENV TZ=UTC
