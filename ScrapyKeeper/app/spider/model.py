@@ -3,6 +3,7 @@ import demjson
 import numpy as np
 import re
 from sqlalchemy import desc
+from sqlalchemy.sql import text
 from ScrapyKeeper.app import db, Base
 from ScrapyKeeper.app.spider import helper
 
@@ -407,20 +408,18 @@ class JobExecution(Base):
 
     @classmethod
     def get_last_execution_by_spider(self, spider_name):
-        sql = """
-           SELECT s.id, e.items_count
-            FROM sk_job_instance AS i
-            JOIN sk_job_execution AS e ON i.id = e.job_instance_id
-            JOIN sk_spider AS s on i.spider_name = s.spider_name
-            WHERE i.spider_name = :name AND e.running_status = :status
-            ORDER BY i.id DESC
-            LIMIT 10
-        """
+        sql = text('''SELECT s.id, e.items_count 
+            FROM sk_job_instance AS i 
+            JOIN sk_job_execution AS e ON i.id = e.job_instance_id 
+            JOIN sk_spider AS s ON i.spider_name = s.spider_name 
+            WHERE i.spider_name = :name AND e.running_status = :status 
+            ORDER BY i.id DESC 
+            LIMIT 10''')
 
         result = []
         spider_id = None
 
-        for row in db.engine.execute(sql, {'name': spider_name, 'status': SpiderStatus.FINISHED}):
+        for row in db.engine.execute(sql, name=spider_name, status=SpiderStatus.FINISHED):
             result.append(row[1])
             spider_id = row[0]
 
