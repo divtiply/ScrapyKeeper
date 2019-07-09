@@ -1,5 +1,5 @@
 scrapy-keeper:
-  image: scrapy-keeper
+  image: crawlie-keeper
   environment:
     - SERVERS=http://localhost:6800,http://localhost:6801
   ports:
