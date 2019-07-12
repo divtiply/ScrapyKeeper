@@ -137,8 +137,7 @@ class JobInstance(Base):
             cron_month=self.cron_month,
             enabled=self.enabled == 0,
             run_type=self.run_type,
-            overlapping = self.overlapping
-
+            overlapping=self.overlapping
         )
 
     @classmethod
@@ -176,11 +175,12 @@ class JobExecution(Base):
     exceptions_count = db.Column(db.Integer, default=0)
     cache_size_count = db.Column(db.Integer, default=0)
     cache_object_count = db.Column(db.Integer, default=0)
-    RAW_STATS_REGEX = '\[scrapy\.statscollectors\][^{]+({[^}]+})'
+    RAW_STATS_REGEX = r'\[scrapy\.statscollectors\][^{]+({[^}]+})'
+
     def process_raw_stats(self):
         if self.raw_stats is None:
             return
-        datetime_regex = '(datetime\.datetime\([^)]+\))'
+        datetime_regex = r'(datetime\.datetime\([^)]+\))'
         self.raw_stats = re.sub(datetime_regex, r"'\1'", self.raw_stats)
         stats = demjson.decode(self.raw_stats)
         self.requests_count = stats.get('downloader/request_count') or 0
@@ -192,8 +192,10 @@ class JobExecution(Base):
         self.exceptions_count = stats.get('downloader/exception_count') or 0
         self.cache_size_count = stats.get('cache/size/end') or 0
         self.cache_object_count = stats.get('cache/object/keeped') or 0
+
     def has_warnings(self):
         return not self.raw_stats or not self.items_count or self.warnings_count
+
     def has_errors(self):
         return bool(self.errors_count)
 
@@ -250,7 +252,7 @@ class JobExecution(Base):
         result['COMPLETED'] = [job_execution.to_dict() for job_execution in
                                JobExecution.query.filter(JobExecution.project_id == project_id).filter(
                                    (JobExecution.running_status == SpiderStatus.FINISHED) | (
-                                       JobExecution.running_status == SpiderStatus.CANCELED)).order_by(
+                                           JobExecution.running_status == SpiderStatus.CANCELED)).order_by(
                                    desc(JobExecution.date_modified)).limit(each_status_limit)]
         return result
 
@@ -261,10 +263,10 @@ class JobExecution(Base):
         last_time = datetime.datetime(last_time.year, last_time.month, last_time.day, last_time.hour)
         for job_execution in JobExecution.query.filter(JobExecution.project_id == project_id,
                                                        JobExecution.date_created >= last_time).all():
-            if (job_execution.start_time != None) : # avoid unstarted jobs
+            if (job_execution.start_time != None):  # avoid unstarted jobs
                 if job_execution.end_time == None:  # treat unfinished jobs
                     duration = (datetime.datetime.now() - job_execution.start_time).total_seconds()
-                else :                              # normal case
+                else:  # normal case
                     duration = (job_execution.end_time - job_execution.start_time).total_seconds()
                 dico = job_execution.to_dict()
                 if dico['job_instance'] != {}:
@@ -272,7 +274,7 @@ class JobExecution(Base):
 
                     if spider_name in result.keys():
                         result[spider_name] += duration
-                    else :
+                    else:
                         result[spider_name] = duration
         result_sorted = {}
         for key in sorted(result.keys()): result_sorted[key] = result[key]
@@ -281,9 +283,11 @@ class JobExecution(Base):
     @classmethod
     def list_last_run(cls, project_id):
         result = []
-        for job_execution in JobExecution.query.filter_by(project_id=project_id).order_by(desc(JobExecution.id)).limit(15).all():
+        for job_execution in JobExecution.query.filter_by(project_id=project_id).order_by(desc(JobExecution.id)).limit(
+                15).all():
             item = job_execution.to_dict()
-            item.get('job_instance')['spider_name'] = helper.prepare_spider_name(item.get('job_instance')['spider_name'])
+            item.get('job_instance')['spider_name'] = helper.prepare_spider_name(
+                item.get('job_instance')['spider_name'])
             result.append(item)
         result.reverse()
         return result
@@ -292,21 +296,21 @@ class JobExecution(Base):
     def list_quality_review(cls, project_id):
         result = {}
         iteration = {}
-        for job_execution in JobExecution.query.filter_by(project_id=project_id).order_by(desc(JobExecution.id)).limit(100).all():
-            
+        for job_execution in JobExecution.query.filter_by(project_id=project_id).order_by(desc(JobExecution.id)).limit(
+                100).all():
+
             dico = job_execution.to_dict()
             # Errors, Retry, Exceptions, Bytes, Cache Size
-            stream = np.array([ dico['errors_count'], dico['retries_count'], dico['exceptions_count'],
-                                dico['warnings_count'], dico['bytes_count'], dico['cache_size_count'] ])
-
+            stream = np.array([dico['errors_count'], dico['retries_count'], dico['exceptions_count'],
+                               dico['warnings_count'], dico['bytes_count'], dico['cache_size_count']])
 
             if dico['job_instance'] != {}:
                 spider_name = helper.prepare_spider_name(dico['job_instance']['spider_name'])
                 if spider_name in result.keys():
-                    if iteration[spider_name] < 10 :
+                    if iteration[spider_name] < 10:
                         iteration[spider_name] += 1
                         result[spider_name] += stream
-                else :
+                else:
                     iteration[spider_name] = 1
                     result[spider_name] = stream
         total = np.array([.01, .01, .01, .01, .01, .01])
@@ -323,8 +327,9 @@ class JobExecution(Base):
     def list_last_ee(cls, project_id):
         result = []
         for job_execution in JobExecution.query.filter(JobExecution.project_id == project_id).filter(
-                                    (JobExecution.errors_count >= 1) | (JobExecution.exceptions_count >= 1) | (JobExecution.items_count == 0)
-                                    ).order_by(desc(JobExecution.id)).limit(10).all():
+                (JobExecution.errors_count >= 1) | (JobExecution.exceptions_count >= 1) | (
+                        JobExecution.items_count == 0)
+        ).order_by(desc(JobExecution.id)).limit(10).all():
             result.append(job_execution.to_dict())
         return result
 
@@ -351,9 +356,11 @@ class JobExecution(Base):
         for spider in SpiderInstance.query.filter_by(project_id=project_id, id=spider_id).all():
             spider_name = spider.spider_name
         job_instances = []
-        for job_instance in JobInstance.query.filter_by(spider_name=spider_name).order_by(desc(JobInstance.id)).limit(10).all():
+        for job_instance in JobInstance.query.filter_by(spider_name=spider_name).order_by(desc(JobInstance.id)).limit(
+                10).all():
             job_instances.append(job_instance.id)
-        for job_execution in JobExecution.query.filter_by(running_status=SpiderStatus.FINISHED).filter(JobExecution.job_instance_id.in_(job_instances)).order_by(desc(JobExecution.id)).all() :
+        for job_execution in JobExecution.query.filter_by(running_status=SpiderStatus.FINISHED).filter(
+                JobExecution.job_instance_id.in_(job_instances)).order_by(desc(JobExecution.id)).all():
             result.append(job_execution.to_dict())
         result.reverse()
         return result
@@ -369,15 +376,15 @@ class JobExecution(Base):
             hour_key = time_tmp.strftime('%Y-%m-%d %H:00:00')
             hour_keys.append(hour_key)
             result[hour_key] = 0  # init
-        if spider_id == "project" :
+        if spider_id == "project":
             for job_execution in JobExecution.query.filter(JobExecution.project_id == project_id,
-                                                       JobExecution.date_created >= last_time).all():
+                                                           JobExecution.date_created >= last_time).all():
                 hour_key = job_execution.create_time.strftime('%Y-%m-%d %H:00:00')
                 result[hour_key] += job_execution.requests_count
-        else :
+        else:
             for job_execution in JobExecution.query.filter(JobExecution.project_id == project_id,
-                                                       JobExecution.job_instance_id == spider_id,
-                                                       JobExecution.date_created >= last_time).all():
+                                                           JobExecution.job_instance_id == spider_id,
+                                                           JobExecution.date_created >= last_time).all():
                 hour_key = job_execution.create_time.strftime('%Y-%m-%d %H:00:00')
                 result[hour_key] += job_execution.requests_count
         return [dict(key=hour_key, value=result[hour_key]) for hour_key in hour_keys]
@@ -393,15 +400,15 @@ class JobExecution(Base):
             hour_key = time_tmp.strftime('%Y-%m-%d %H:00:00')
             hour_keys.append(hour_key)
             result[hour_key] = 0  # init
-        if spider_id == "project" :
+        if spider_id == "project":
             for job_execution in JobExecution.query.filter(JobExecution.project_id == project_id,
-                                                       JobExecution.date_created >= last_time).all():
+                                                           JobExecution.date_created >= last_time).all():
                 hour_key = job_execution.create_time.strftime('%Y-%m-%d %H:00:00')
                 result[hour_key] += job_execution.items_count
-        else :
+        else:
             for job_execution in JobExecution.query.filter(JobExecution.project_id == project_id,
-                                                       JobExecution.job_instance_id == spider_id,
-                                                       JobExecution.date_created >= last_time).all():
+                                                           JobExecution.job_instance_id == spider_id,
+                                                           JobExecution.date_created >= last_time).all():
                 hour_key = job_execution.create_time.strftime('%Y-%m-%d %H:00:00')
                 result[hour_key] += job_execution.items_count
         return [dict(key=hour_key, value=result[hour_key]) for hour_key in hour_keys]
@@ -429,6 +436,5 @@ class JobExecution(Base):
     def get_running_jobs_by_spider_name(self, spider_name):
         return JobExecution.query \
             .join(JobInstance, JobExecution.job_instance_id == JobInstance.id) \
-            .filter(JobExecution.running_status == SpiderStatus.RUNNING,
-                    JobInstance.spider_name == spider_name
-            ).all()
+            .filter(JobExecution.running_status == SpiderStatus.RUNNING, JobInstance.spider_name == spider_name) \
+            .all()

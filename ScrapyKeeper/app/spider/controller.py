@@ -532,15 +532,12 @@ def project_manage():
 
 @app.route("/project/<project_id>/job/dashboard")
 def job_dashboard(project_id):
-
     jobs = JobExecution.list_jobs(project_id)
-    unique_spiders = []
+    unique_spiders = set()
 
     for job in jobs['COMPLETED']:
         instance = job['job_instance']
-        spider_name = instance.get('spider_name')
-        if spider_name and spider_name not in unique_spiders:
-            unique_spiders.append(spider_name)
+        unique_spiders.add(instance.get('spider_name'))
 
     spider_colours = {}
 
@@ -569,7 +566,7 @@ def job_dashboard(project_id):
             'spider_id': spider_id
         }
 
-    return render_template("job_dashboard.html", job_status=jobs, spider_colours = spider_colours)
+    return render_template("job_dashboard.html", job_status=jobs, spider_colours=spider_colours)
 
 
 @app.route("/project/<project_id>/job/periodic")
@@ -710,6 +707,7 @@ def job_switch_overlapping(project_id, job_instance_id):
     job_instance.overlapping = True if not job_instance.overlapping else False
     db.session.commit()
     return redirect(request.referrer, code=302)
+
 
 @app.route("/project/<project_id>/spider/dashboard")
 def spider_dashboard(project_id):
@@ -853,7 +851,8 @@ def project_stats(project_id, spider_id):
             max_items_count = 100
             average_items_count = 50
         else:
-            (min_items_count, average_items_count, max_items_count) = _compute_item_stats(old_items_count, last_items_count)
+            (min_items_count, average_items_count, max_items_count) = _compute_item_stats(old_items_count,
+                                                                                          last_items_count)
 
         return render_template("spider_stats.html", spider=spider, start_time=start_time, end_time=end_time,
                                end_time_short=end_time_short, duration_time=duration_time,
