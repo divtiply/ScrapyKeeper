@@ -68,14 +68,14 @@ class SpiderInstance(Base):
     @classmethod
     def list_spiders(cls, project_id):
         sql_last_runtime = '''
-            select * from (select a.spider_name,b.date_created from sk_job_instance as a
-                left join sk_job_execution as b
-                on a.id = b.job_instance_id
-                order by b.date_created desc) as c
-                group by c.spider_name
+            SELECT a.spider_name, MAX(b.date_created) AS date_created
+            FROM sk_job_instance AS a
+            LEFT JOIN sk_job_execution AS b ON a.id = b.job_instance_id
+            GROUP BY a.spider_name
+            ORDER BY date_created DESC
             '''
         sql_avg_runtime = '''
-            select a.spider_name, avg(round(datediff(end_time, start_time))) avg_run_time from sk_job_instance as a
+            select a.spider_name, avg(TIMESTAMPDIFF(SECOND, start_time, end_time)) avg_run_time from sk_job_instance as a
                 left join sk_job_execution as b
                 on a.id = b.job_instance_id
                 where b.end_time is not null
@@ -413,7 +413,7 @@ class JobExecution(Base):
             JOIN sk_job_execution AS e ON i.id = e.job_instance_id 
             JOIN sk_spider AS s ON i.spider_name = s.spider_name 
             WHERE i.spider_name = :name AND e.running_status = :status 
-            ORDER BY i.id DESC 
+            ORDER BY e.id DESC 
             LIMIT 10''')
 
         result = []
