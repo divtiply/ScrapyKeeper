@@ -19,7 +19,7 @@ def main():
     if opts.verbose:
         app.logger.setLevel(logging.DEBUG)
     initialize()
-    app.logger.info("ScrapyKeeper startd on %s:%s username:%s/password:%s with %s servers:%s" % (
+    app.logger.info("ScrapyKeeper started on %s:%s username:%s/password:%s with %s servers:%s" % (
         opts.host, opts.port, opts.username, opts.password, opts.server_type, ','.join(app.config.get('SERVERS', []))))
     app.run(host=opts.host, port=opts.port, use_reloader=False, threaded=True)
 

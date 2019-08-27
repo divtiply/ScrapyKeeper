@@ -2,10 +2,9 @@
 import logging
 import traceback
 
-import apscheduler
+from apscheduler.jobstores.sqlalchemy import SQLAlchemyJobStore
 from apscheduler.schedulers.background import BackgroundScheduler
-from flask import Flask
-from flask import jsonify
+from flask import Flask, jsonify
 from flask_basicauth import BasicAuth
 from flask_restful import Api
 from flask_restful_swagger import swagger
@@ -26,14 +25,12 @@ log.setLevel(logging.ERROR)
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 handler = logging.StreamHandler()
 handler.setFormatter(formatter)
-app.logger.setLevel(app.config.get('LOG_LEVEL', "INFO"))
+app.logger.setLevel(app.config.get('LOG_LEVEL', 'INFO'))
 app.logger.addHandler(handler)
 
 # swagger
-api = swagger.docs(Api(app), apiVersion=ScrapyKeeper.__version__, api_spec_url="/api",
-                   description='ScrapyKeeper')
-# Define the database object which is imported
-# by modules and controllers
+api = swagger.docs(Api(app), apiVersion=ScrapyKeeper.__version__, api_spec_url='/api', description='ScrapyKeeper')
+# Define the database object which is imported by modules and controllers
 db = SQLAlchemy(app, session_options=dict(autocommit=False, autoflush=True))
 
 
@@ -44,8 +41,12 @@ def teardown_request(exception):
         db.session.remove()
     db.session.remove()
 
-# Define apscheduler
-scheduler = BackgroundScheduler()
+
+# Define app scheduler
+jobstores = {
+    'default': SQLAlchemyJobStore(url=app.config.get('SQLALCHEMY_DATABASE_URI'))
+}
+scheduler = BackgroundScheduler(jobstores=jobstores)
 
 
 class Base(db.Model):
@@ -53,8 +54,7 @@ class Base(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     date_created = db.Column(db.DateTime, default=db.func.current_timestamp())
-    date_modified = db.Column(db.DateTime, default=db.func.current_timestamp(),
-                              onupdate=db.func.current_timestamp())
+    date_modified = db.Column(db.DateTime, default=db.func.current_timestamp(), onupdate=db.func.current_timestamp())
 
 
 # Sample HTTP error handling
@@ -95,7 +95,7 @@ agent = SpiderAgent()
 
 def regist_server():
     if app.config.get('SERVER_TYPE') == 'scrapyd':
-        for server in app.config.get("SERVERS"):
+        for server in app.config.get('SERVERS'):
             agent.regist(ScrapydProxy(server))
 
 
@@ -108,9 +108,9 @@ app.register_blueprint(api_spider_bp)
 from ScrapyKeeper.app.schedulers.common import sync_job_execution_status_job, sync_spiders, \
     reload_runnable_spider_job_execution
 
-scheduler.add_job(sync_job_execution_status_job, 'interval', seconds=5, id='sys_sync_status')
-scheduler.add_job(sync_spiders, 'interval', seconds=10, id='sys_sync_spiders')
-scheduler.add_job(reload_runnable_spider_job_execution, 'interval', seconds=30, id='sys_reload_job')
+scheduler.add_job(sync_job_execution_status_job, 'interval', seconds=5, id='sys_sync_status', replace_existing=True)
+scheduler.add_job(sync_spiders, 'interval', seconds=10, id='sys_sync_spiders', replace_existing=True)
+scheduler.add_job(reload_runnable_spider_job_execution, 'interval', seconds=60, id='sys_reload_job', replace_existing=True)
 
 
 def start_scheduler():
@@ -126,7 +126,7 @@ def init_sentry():
     if not app.config.get('NO_SENTRY'):
         import sentry_sdk
         from sentry_sdk.integrations.flask import FlaskIntegration
-        sentry_sdk.init( dsn="https://5c1450ef1eeb45f3acfc6cc0eae47ce7@sentry.io/1301690", integrations=[FlaskIntegration()] )
+        sentry_sdk.init(dsn=app.config.get('SENTRY_URI'), integrations=[FlaskIntegration()])
         app.logger.info('Starting with sentry.io error reporting')
 
 

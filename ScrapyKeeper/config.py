@@ -45,3 +45,4 @@ BASIC_AUTH_PASSWORD = 'admin'
 BASIC_AUTH_FORCE = True
 
 NO_SENTRY = False
+SENTRY_URI = 'https://0eb61a7edcec4db48f027ea27d43bc7a@sentry.io/1543042'
