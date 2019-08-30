@@ -137,11 +137,11 @@ class SpiderAgent():
                         job_execution.raw_stats = match[0]
                         job_execution.process_raw_stats()
 
-            # mark jobs as CRASHED
-            for job_execution in job_execution_list:
-                if job_execution.service_job_execution_id not in found_jobs:
-                    job_execution.running_status = SpiderStatus.CRASHED
-                    job_execution.end_time = datetime.datetime.now()
+        # mark jobs as CRASHED
+        for job_execution in job_execution_list:
+            if job_execution.service_job_execution_id not in found_jobs:
+                job_execution.running_status = SpiderStatus.CRASHED
+                job_execution.end_time = datetime.datetime.now()
 
             # commit
             db.session.commit()
