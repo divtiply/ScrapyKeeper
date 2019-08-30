@@ -199,8 +199,10 @@
                 <td>
                     {% if job.running_status == 2 %}
                         <span class="label label-success">FINISHED</span>
-                    {% else %}
+                    {% elif job.running_status == 3 %}
                         <span class="label label-warning">CANCELED</span>
+                    {% else %}
+                        <span class="label label-danger">CRASHED</span>
                     {% endif %}
                     <a href="/project/{{ project.id }}/jobexecs/{{ job.job_execution_id }}/remove"><span class="label label-danger">REMOVE</span></a>
                 </td>

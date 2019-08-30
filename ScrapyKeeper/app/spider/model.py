@@ -150,7 +150,7 @@ class JobInstance(Base):
 
 
 class SpiderStatus():
-    PENDING, RUNNING, FINISHED, CANCELED = range(4)
+    PENDING, RUNNING, FINISHED, CANCELED, CRASHED = range(5)
 
 
 class JobExecution(Base):
@@ -236,7 +236,8 @@ class JobExecution(Base):
     @classmethod
     def list_uncomplete_job(cls):
         return cls.query.filter(cls.running_status != SpiderStatus.FINISHED,
-                                cls.running_status != SpiderStatus.CANCELED).all()
+                                cls.running_status != SpiderStatus.CANCELED,
+                                cls.running_status != SpiderStatus.CRASHED).all()
 
     @classmethod
     def list_jobs(cls, project_id, each_status_limit=100):
@@ -251,8 +252,9 @@ class JobExecution(Base):
                                  desc(JobExecution.date_modified)).limit(each_status_limit)]
         result['COMPLETED'] = [job_execution.to_dict() for job_execution in
                                JobExecution.query.filter(JobExecution.project_id == project_id).filter(
-                                   (JobExecution.running_status == SpiderStatus.FINISHED) | (
-                                           JobExecution.running_status == SpiderStatus.CANCELED)).order_by(
+                                   (JobExecution.running_status == SpiderStatus.FINISHED) |
+                                   (JobExecution.running_status == SpiderStatus.CANCELED) |
+                                   (JobExecution.running_status == SpiderStatus.CRASHED)).order_by(
                                    desc(JobExecution.date_modified)).limit(each_status_limit)]
         return result
 

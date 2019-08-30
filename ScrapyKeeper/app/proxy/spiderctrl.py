@@ -98,13 +98,22 @@ class SpiderAgent():
         pass
 
     def sync_job_status(self, project):
+        found_jobs = []
+
+        job_execution_list = JobExecution.list_uncomplete_job()
+        job_execution_dict = dict(
+            [(job_execution.service_job_execution_id, job_execution) for job_execution in job_execution_list])
+
         for spider_service_instance in self.spider_service_instances:
             job_status = spider_service_instance.get_job_list(project.project_name)
-            job_execution_list = JobExecution.list_uncomplete_job()
-            job_execution_dict = dict(
-                [(job_execution.service_job_execution_id, job_execution) for job_execution in job_execution_list])
+            # pending
+            for job_execution_info in job_status[SpiderStatus.PENDING]:
+                found_jobs.append(job_execution_info['id'])
+
             # running
             for job_execution_info in job_status[SpiderStatus.RUNNING]:
+                found_jobs.append(job_execution_info['id'])
+
                 job_execution = job_execution_dict.get(job_execution_info['id'])
                 if job_execution and job_execution.running_status == SpiderStatus.PENDING:
                     job_execution.start_time = job_execution_info['start_time']
@@ -112,6 +121,8 @@ class SpiderAgent():
 
             # finished
             for job_execution_info in job_status[SpiderStatus.FINISHED]:
+                found_jobs.append(job_execution_info['id'])
+
                 job_execution = job_execution_dict.get(job_execution_info['id'])
                 if job_execution and job_execution.running_status != SpiderStatus.FINISHED:
                     job_execution.start_time = job_execution_info['start_time']
@@ -125,6 +136,13 @@ class SpiderAgent():
                     if match:
                         job_execution.raw_stats = match[0]
                         job_execution.process_raw_stats()
+
+            # mark jobs as CRASHED
+            for job_execution in job_execution_list:
+                if job_execution.service_job_execution_id not in found_jobs:
+                    job_execution.running_status = SpiderStatus.CRASHED
+                    job_execution.end_time = datetime.datetime.now()
+
             # commit
             db.session.commit()
 
