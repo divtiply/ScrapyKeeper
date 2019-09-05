@@ -1,6 +1,5 @@
 import datetime
 import random
-from functools import reduce
 import requests
 import re
 
@@ -14,47 +13,42 @@ class SpiderServiceProxy(object):
         self._server = server
 
     def get_project_list(self):
-        '''
-
+        """
         :return: []
-        '''
+        """
         pass
 
     def delete_project(self, project_name):
-        '''
-
+        """
         :return:
-        '''
+        """
         pass
 
     def get_spider_list(self, *args, **kwargs):
-        '''
-
+        """
         :param args:
         :param kwargs:
         :return: []
-        '''
+        """
         return NotImplementedError
 
     def get_daemon_status(self):
         return NotImplementedError
 
     def get_job_list(self, project_name, spider_status):
-        '''
-
+        """
         :param project_name:
         :param spider_status:
         :return: job service execution id list
-        '''
+        """
         return NotImplementedError
 
     def start_spider(self, *args, **kwargs):
-        '''
-
+        """
         :param args:
         :param kwargs:
         :return: {id:foo,start_time:None,end_time:None}
-        '''
+        """
         return NotImplementedError
 
     def cancel_spider(self, *args, **kwargs):
@@ -71,7 +65,7 @@ class SpiderServiceProxy(object):
         return self._server
 
 
-class SpiderAgent():
+class SpiderAgent:
     def __init__(self):
         self.spider_service_instances = []
 
@@ -143,8 +137,8 @@ class SpiderAgent():
                 job_execution.running_status = SpiderStatus.CRASHED
                 job_execution.end_time = datetime.datetime.now()
 
-            # commit
-            db.session.commit()
+        # commit
+        db.session.commit()
 
     def _spider_already_running(self, spider_name):
         running_jobs = JobExecution.get_running_jobs_by_spider_name(spider_name)
@@ -158,8 +152,8 @@ class SpiderAgent():
 
         project = Project.find_project_by_id(job_instance.project_id)
         spider_name = job_instance.spider_name
-        #arguments = {}
-        #if job_instance.spider_arguments:
+        # arguments = {}
+        # if job_instance.spider_arguments:
         #    arguments = dict(map(lambda x: x.split("="), job_instance.spider_arguments.split(",")))
         from collections import defaultdict
         arguments = defaultdict(list)
