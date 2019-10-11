@@ -123,7 +123,7 @@ def init_basic_auth():
 
 
 def init_sentry():
-    if not app.config.get('NO_SENTRY'):
+    if not app.config.get('NO_SENTRY') and app.config.get('SENTRY_URI'):
         import sentry_sdk
         from sentry_sdk.integrations.flask import FlaskIntegration
         sentry_sdk.init(dsn=app.config.get('SENTRY_URI'), integrations=[FlaskIntegration()])
