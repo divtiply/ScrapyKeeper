@@ -35,8 +35,7 @@ LOG_LEVEL = 'INFO'
 SERVER_TYPE = 'scrapyd'
 
 servers_string = os.getenv('SERVERS', '')
-servers_list = [s.strip() for s in servers_string.split(',') if s]
-SERVERS = servers_list or ['http://localhost:6800']
+SERVERS = [s.strip() for s in servers_string.split(',') if s]
 
 # basic auth
 NO_AUTH = False
@@ -50,3 +49,6 @@ SENTRY_URI = os.getenv('SENTRY_URI', None)
 # http settings
 
 DEFAULT_TIMEOUT = 30  # seconds
+
+AWS_DEFAULT_REGION = 'eu-west-1'
+DEFAULT_CLUSTER_NAME = 'crawler'

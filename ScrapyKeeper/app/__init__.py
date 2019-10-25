@@ -13,6 +13,7 @@ from werkzeug.exceptions import HTTPException
 
 import ScrapyKeeper
 from ScrapyKeeper import config
+from ScrapyKeeper.app.util.config import get_cluster_servers 
 
 # Define the WSGI application object
 app = Flask(__name__)
@@ -95,7 +96,9 @@ agent = SpiderAgent()
 
 def regist_server():
     if app.config.get('SERVER_TYPE') == 'scrapyd':
-        for server in app.config.get('SERVERS'):
+        servers = app.config.get('SERVERS') or get_cluster_servers(app)
+        
+        for server in servers:
             agent.regist(ScrapydProxy(server))
 
 

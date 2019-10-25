@@ -1,5 +1,6 @@
 aniso8601==1.2.0
 APScheduler==3.3.1
+boto3==1.10.2
 click==6.7
 demjson==2.2.4
 Flask==0.12.1
