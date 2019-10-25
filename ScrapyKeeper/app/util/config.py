@@ -6,7 +6,7 @@ def get_cluster_servers(app):
     Dynamically get the instance ips from a given cluster
     :return: list
     """
-    ecs_conn = boto3.client('ecs')
+    ecs_conn = boto3.client('ecs', region_name=app.config.get('AWS_DEFAULT_REGION'))
     
     cluster_name = app.config.get('DEFAULT_CLUSTER_NAME')
     
@@ -19,7 +19,7 @@ def get_cluster_servers(app):
     if not instance_ids:
         return []
     
-    ec2_conn = boto3.client('ec2')
+    ec2_conn = boto3.client('ec2', region_name=app.config.get('AWS_DEFAULT_REGION'))
     detailed_instances = ec2_conn.describe_instances(InstanceIds=instance_ids)
     
     ips = []
