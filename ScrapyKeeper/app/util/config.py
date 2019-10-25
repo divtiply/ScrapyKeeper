@@ -30,6 +30,6 @@ def get_cluster_servers(app):
     if not ips:
         return []
     
-    servers = ['http://{}:6800/'.format(ip) for ip in ips]
+    servers = ['http://{}:6800'.format(ip) for ip in ips]
     
     return servers

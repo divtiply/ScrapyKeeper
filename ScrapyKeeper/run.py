@@ -1,15 +1,14 @@
 import logging
-import os
 from optparse import OptionParser
 
-from ScrapyKeeper.app import app, initialize
+from ScrapyKeeper.app import app, initialize, get_cluster_servers
 
 
 def main():
     opts, args = parse_opts(app.config)
     app.config.update(dict(
         SERVER_TYPE=opts.server_type,
-        SERVERS=opts.servers or app.config.get('SERVERS'),
+        SERVERS=opts.servers or app.config.get('SERVERS') or get_cluster_servers(app),
         SQLALCHEMY_DATABASE_URI=opts.database_url,
         BASIC_AUTH_USERNAME=opts.username,
         BASIC_AUTH_PASSWORD=opts.password,

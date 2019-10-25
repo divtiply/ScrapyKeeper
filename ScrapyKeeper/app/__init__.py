@@ -96,7 +96,7 @@ agent = SpiderAgent()
 
 def regist_server():
     if app.config.get('SERVER_TYPE') == 'scrapyd':
-        servers = app.config.get('SERVERS') or get_cluster_servers(app)
+        servers = app.config.get('SERVERS')
         
         for server in servers:
             agent.regist(ScrapydProxy(server))

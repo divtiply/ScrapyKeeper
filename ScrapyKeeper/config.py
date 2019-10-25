@@ -31,6 +31,9 @@ SECRET_KEY = "secret"
 # log
 LOG_LEVEL = 'INFO'
 
+AWS_DEFAULT_REGION = 'eu-west-1'
+DEFAULT_CLUSTER_NAME = 'crawler'
+
 # spider services
 SERVER_TYPE = 'scrapyd'
 
@@ -49,6 +52,3 @@ SENTRY_URI = os.getenv('SENTRY_URI', None)
 # http settings
 
 DEFAULT_TIMEOUT = 30  # seconds
-
-AWS_DEFAULT_REGION = 'eu-west-1'
-DEFAULT_CLUSTER_NAME = 'crawler'
