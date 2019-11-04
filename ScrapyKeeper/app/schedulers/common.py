@@ -5,8 +5,6 @@ from ScrapyKeeper import config
 from ScrapyKeeper.app import scheduler, app, agent, JobExecution, db
 from ScrapyKeeper.app.spider.model import Project, JobInstance, SpiderInstance, JobRunType, JobPriority
 from datetime import datetime
-from collections import OrderedDict
-import operator
 
 
 def sync_job_execution_status_job():
@@ -189,11 +187,11 @@ def _run_spider(spider_name, project_id):
     job_instance = JobInstance()
     job_instance.project_id = project_id
     job_instance.spider_name = spider_name
-    # job_instance.spider_arguments =  # we'll need to add arguments here when we'll want to temper the requests
     job_instance.priority = JobPriority.NORMAL
     job_instance.run_type = JobRunType.ONETIME
     job_instance.overlapping = False
     job_instance.enabled = -1
+    # job_instance.spider_arguments =  # we'll need to add arguments here when we'll want to temper the requests
 
     db.session.add(job_instance)
     db.session.commit()
