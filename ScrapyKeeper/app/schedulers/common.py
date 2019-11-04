@@ -1,7 +1,12 @@
 import time
 
-from ScrapyKeeper.app import scheduler, app, agent
-from ScrapyKeeper.app.spider.model import Project, JobInstance, SpiderInstance
+from ScrapyKeeper import config
+
+from ScrapyKeeper.app import scheduler, app, agent, JobExecution, db
+from ScrapyKeeper.app.spider.model import Project, JobInstance, SpiderInstance, JobRunType, JobPriority
+from datetime import datetime
+from collections import OrderedDict
+import operator
 
 
 def sync_job_execution_status_job():
@@ -77,3 +82,155 @@ def reload_runnable_spider_job_execution():
                                  running_job_ids.difference(available_job_ids)):
         scheduler.remove_job(invalid_job_id)
         app.logger.info('[drop_spider_job][job_id:%s]' % invalid_job_id)
+
+
+def run_spiders_by_algorithm():
+    """
+    Run all the spiders when needed
+    :return:
+    """
+    for project in Project.query.all():
+        _run_spiders_for_project(project)
+    app.logger.debug('[run_spiders_by_algorithm]')
+
+
+def _run_spiders_for_project(project: Project):
+    """
+    Run all the spiders for the current project
+    :param project:
+    :return:
+    """
+    # grab the list with all the spiders in the project
+    spider_list = [spider_instance.to_dict() for spider_instance in
+                   SpiderInstance.query.filter_by(project_id=project.id).order_by(
+                       SpiderInstance.spider_name).all()]
+
+    # compute the current running load
+    current_run_load = _get_current_run_load(project.id)
+
+    # gather a list with all the spiders
+    spiders_by_avg_run_load = [{'spider_id': spider['spider_instance_id'],
+                                'spider_name': spider['spider_name'],
+                                'avg_load': _get_spider_average_run_stats(project.id, spider['spider_instance_id'])}
+                               for spider in spider_list]
+    # sort the list from the one with least requests to the one with most
+    spiders_by_avg_run_load = sorted(spiders_by_avg_run_load, key=lambda i: i['avg_load'])
+
+    # gather a list of active spiders only
+    active_spiders_avg_run_load = [spider['avg_load'] for spider in spiders_by_avg_run_load if spider['avg_load'] > 0]
+    # compute the avg load time for those spiders
+    active_spiders_avg_run_load = sum(active_spiders_avg_run_load) / max(len(active_spiders_avg_run_load), 1)
+    active_spiders_avg_run_load = active_spiders_avg_run_load if active_spiders_avg_run_load > 0 \
+        else config.DEFAULT_LOAD_TO_ADD
+
+    # run the spiders that we have to run
+    for spider_to_run in spiders_by_avg_run_load:
+        spider_avg_load = spider_to_run['avg_load'] if spider_to_run['avg_load'] > 0 else \
+                active_spiders_avg_run_load
+
+        if _spider_should_run(spider_to_run['spider_id'], spider_avg_load, current_run_load):
+            _run_spider(spider_to_run['spider_name'], project.id)
+            current_run_load += spider_avg_load
+
+        if current_run_load >= config.MAX_REQUESTS_PER_MINUTE_ALLOWED:
+            # the load is already to the max, we can't add anything
+            break
+
+
+def _get_current_run_load(project_id) -> float:
+    """
+    Get the current work load for all the jobs
+    :param project_id:
+    :return:
+    """
+    running_jobs = JobExecution.list_running_jobs(project_id)
+
+    running_avg = []
+    for running_job in running_jobs:
+        spider_name = running_job['job_instance']['spider_name']
+        spider_id = SpiderInstance.get_spider_by_name_and_project_id(spider_name, project_id).id
+
+        running_avg.append(_get_spider_average_run_stats(project_id, spider_id))
+
+    total_load = sum(running_avg) / max(len(running_avg), 1)
+
+    return total_load
+
+
+def _get_spider_average_run_stats(project_id, spider_id) -> float:
+    # grab only execution that finished successfully
+    execution_list = JobExecution.list_spider_stats(project_id, spider_id)
+    # keep only the latest 10 runs
+    execution_list = execution_list[-10:]
+    # keep only the runs from the current project (for some reason it returns all the projects)
+    execution_list = [execution for execution in execution_list if execution['project_id'] == project_id]
+
+    requests_counters = [execution['requests_count'] for execution in execution_list]
+    average_requests = sum(requests_counters) / max(len(requests_counters), 1)
+
+    execution_seconds = [(datetime.strptime(execution['end_time'], '%Y-%m-%d %H:%M:%S')
+                          - datetime.strptime(execution['start_time'], '%Y-%m-%d %H:%M:%S')).seconds
+                         for execution in execution_list]
+    # get average run time in minutes
+    average_seconds = sum(execution_seconds) / max(len(execution_seconds), 1) / 60
+
+    avg_req_per_min = average_requests / max(average_seconds, 1)
+
+    return avg_req_per_min
+
+
+def _run_spider(spider_name, project_id):
+    """
+    Run a spider
+    :param spider_name: 
+    :param project_id: 
+    :return: 
+    """
+    job_instance = JobInstance()
+    job_instance.project_id = project_id
+    job_instance.spider_name = spider_name
+    # job_instance.spider_arguments =  # we'll need to add arguments here when we'll want to temper the requests
+    job_instance.priority = JobPriority.NORMAL
+    job_instance.run_type = JobRunType.ONETIME
+    job_instance.overlapping = False
+    job_instance.enabled = -1
+
+    db.session.add(job_instance)
+    db.session.commit()
+
+    agent.start_spider(job_instance)
+
+
+def _spider_should_run(spider_id, spider_avg_load, current_run_load):
+    """
+    Check if this spider should run now
+    :param spider_id:
+    :param current_run_load:
+    :return:
+    """
+    spider = SpiderInstance.query.get(spider_id)
+    last_run = JobExecution.get_last_spider_execution(spider.id, spider.project_id)
+
+    if last_run is not None and last_run > datetime.today().replace(hour=0, minute=0, second=0):
+        # test the crawler didn't run today
+        return False
+
+    pending_instances = JobExecution.get_pending_jobs_by_spider_name(spider.spider_name, spider.project_id)
+    if len(pending_instances):
+        # check that another instance of the same crawler is in pending
+        return False
+
+    running_instances = JobExecution.get_running_jobs_by_spider_name(spider.spider_name, spider.project_id)
+    if len(running_instances):
+        # check that another instance of the same crawler is running
+        return False
+
+    if spider.auto_schedule is False:
+        # check if the marker from the DB allows auto scheduling
+        return False
+
+    if current_run_load + spider_avg_load > config.MAX_REQUESTS_PER_MINUTE_ALLOWED:
+        # check that the load is still under control
+        return False
+
+    return True

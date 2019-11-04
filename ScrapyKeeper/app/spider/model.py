@@ -37,6 +37,11 @@ class SpiderInstance(Base):
 
     spider_name = db.Column(db.String(100))
     project_id = db.Column(db.INTEGER, nullable=False, index=True)
+    auto_schedule = db.Column(db.BOOLEAN, nullable=False, default=True)
+
+    @classmethod
+    def get_spider_by_name_and_project_id(cls, spider_name, project_id):
+        return cls.query.filter_by(project_id=project_id, spider_name=spider_name).first()
 
     @classmethod
     def update_spider_instances(cls, project_id, spider_instance_list):
@@ -63,7 +68,8 @@ class SpiderInstance(Base):
     def to_dict(self):
         return dict(spider_instance_id=self.id,
                     spider_name=self.spider_name,
-                    project_id=self.project_id)
+                    project_id=self.project_id,
+                    auto_schedule=self.auto_schedule)
 
     @classmethod
     def list_spiders(cls, project_id):
@@ -259,6 +265,13 @@ class JobExecution(Base):
         return result
 
     @classmethod
+    def list_running_jobs(cls, project_id):
+        return [job_execution.to_dict() for job_execution in
+                JobExecution.query.filter_by(project_id=project_id,
+                                             running_status=SpiderStatus.RUNNING).order_by(
+                                                        desc(JobExecution.date_modified))]
+
+    @classmethod
     def list_working_time(cls, project_id):
         result = {}
         last_time = datetime.datetime.now() - datetime.timedelta(hours=23)
@@ -416,27 +429,53 @@ class JobExecution(Base):
         return [dict(key=hour_key, value=result[hour_key]) for hour_key in hour_keys]
 
     @classmethod
-    def get_last_execution_by_spider(self, spider_name):
+    def get_last_execution_by_spider(cls, spider_name, project_id):
         sql = text('''SELECT s.id, e.items_count 
             FROM sk_job_instance AS i 
             JOIN sk_job_execution AS e ON i.id = e.job_instance_id 
             JOIN sk_spider AS s ON i.spider_name = s.spider_name 
-            WHERE i.spider_name = :name AND e.running_status = :status 
+            WHERE i.spider_name = :name 
+                AND e.running_status = :status 
+                AND s.project_id = :project_id
             ORDER BY e.id DESC 
             LIMIT 10''')
 
         result = []
         spider_id = None
 
-        for row in db.engine.execute(sql, name=spider_name, status=SpiderStatus.FINISHED):
+        for row in db.engine.execute(sql, name=spider_name, status=SpiderStatus.FINISHED, project_id=project_id):
             result.append(row[1])
             spider_id = row[0]
 
         return spider_id, result
 
     @classmethod
-    def get_running_jobs_by_spider_name(self, spider_name):
+    def get_last_spider_execution(cls, spider_id, project_id):
+        sql = text('''SELECT MAX(JE.start_time) AS last_run
+                FROM sk_spider AS S
+                JOIN sk_job_instance AS JI ON JI.spider_name = S.spider_name AND JI.project_id = S.project_id
+                JOIN sk_job_execution AS JE ON JE.job_instance_id = JI.id
+                WHERE S.id = :spider_id
+                    AND S.project_id = :project_id
+                LIMIT 1''')
+
+        result = db.engine.execute(sql, spider_id=spider_id, project_id=project_id)
+
+        return result.first()['last_run']
+
+
+    @classmethod
+    def get_running_jobs_by_spider_name(cls, spider_name, project_id):
         return JobExecution.query \
             .join(JobInstance, JobExecution.job_instance_id == JobInstance.id) \
-            .filter(JobExecution.running_status == SpiderStatus.RUNNING, JobInstance.spider_name == spider_name) \
+            .filter(JobExecution.running_status == SpiderStatus.RUNNING, JobInstance.spider_name == spider_name,
+                    JobInstance.project_id == project_id) \
+            .all()
+
+    @classmethod
+    def get_pending_jobs_by_spider_name(cls, spider_name, project_id):
+        return JobExecution.query \
+            .join(JobInstance, JobExecution.job_instance_id == JobInstance.id) \
+            .filter(JobExecution.running_status == SpiderStatus.PENDING, JobInstance.spider_name == spider_name,
+                    JobInstance.project_id == project_id) \
             .all()
