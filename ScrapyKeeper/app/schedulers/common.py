@@ -191,12 +191,52 @@ def _run_spider(spider_name, project_id):
     job_instance.run_type = JobRunType.ONETIME
     job_instance.overlapping = False
     job_instance.enabled = -1
-    # job_instance.spider_arguments =  # we'll need to add arguments here when we'll want to temper the requests
+
+    # settings for tempering the requests
+    requests_concurrency_arg = _get_spider_tempering_args(spider_name, project_id)
+    job_instance.spider_arguments = requests_concurrency_arg
 
     db.session.add(job_instance)
     db.session.commit()
 
     agent.start_spider(job_instance)
+
+
+def _get_spider_tempering_args(spider_name, project_id):
+    """
+    Find the AUTOTHROTTLE_TARGET_CONCURRENCY for this request
+    :param spider_id:
+    :param project_id:
+    :return:
+    """
+    spider_instance = SpiderInstance.query.filter_by(spider_name=spider_name, project_id=project_id).first()
+
+    # grab only execution that finished successfully
+    execution_list = JobExecution.list_spider_stats(project_id, spider_instance.id)
+    # keep only the latest 10 runs
+    execution_list = execution_list[-10:]
+    # keep only the runs from the current project (for some reason it returns all the projects)
+    execution_list = [execution for execution in execution_list if execution['project_id'] == project_id]
+
+    execution_seconds = [(datetime.strptime(execution['end_time'], '%Y-%m-%d %H:%M:%S')
+                          - datetime.strptime(execution['start_time'], '%Y-%m-%d %H:%M:%S')).seconds
+                         for execution in execution_list]
+    # get average run time in minutes
+    average_mins = sum(execution_seconds) / max(len(execution_seconds), 1) / 60
+
+    if average_mins == 0:
+        # when we don't have any info about past runs
+        return None
+
+    time_spent_ratio = float(1440 / average_mins)  # the ratio reported to 1 day
+    # now we'll have to only keep the number with a min of .5 and a max of 10
+    time_spent_ratio = max(time_spent_ratio, 0.5)
+    time_spent_ratio = min(time_spent_ratio, 10)
+    autothrottle_to_set = config.DEFAULT_AUTOTHROTTLE_MAX_CONCURRENCY / time_spent_ratio
+
+    requests_concurrency_arg = "setting=AUTOTHROTTLE_TARGET_CONCURRENCY={}".format(autothrottle_to_set)
+
+    return requests_concurrency_arg
 
 
 def _spider_should_run(spider_id, spider_avg_load, current_run_load):
