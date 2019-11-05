@@ -193,7 +193,7 @@ def _run_spider(spider_name, project_id):
     job_instance.enabled = -1
 
     # settings for tempering the requests
-    requests_concurrency_arg = _get_spider_tempering_args(spider_name, project_id)
+    requests_concurrency_arg = _set_throttle_args(spider_name, project_id)
     job_instance.spider_arguments = requests_concurrency_arg
 
     db.session.add(job_instance)
@@ -202,7 +202,7 @@ def _run_spider(spider_name, project_id):
     agent.start_spider(job_instance)
 
 
-def _get_spider_tempering_args(spider_name, project_id):
+def _set_throttle_args(spider_name, project_id):
     """
     Find the AUTOTHROTTLE_TARGET_CONCURRENCY for this request
     :param spider_id:
@@ -219,7 +219,7 @@ def _get_spider_tempering_args(spider_name, project_id):
     execution_list = [execution for execution in execution_list if execution['project_id'] == project_id]
 
     execution_seconds = [(datetime.strptime(execution['end_time'], '%Y-%m-%d %H:%M:%S')
-                          - datetime.strptime(execution['start_time'], '%Y-%m-%d %H:%M:%S')).seconds
+                          - datetime.strptime(execution['start_time'], '%Y-%m-%d %H:%M:%S')).total_seconds()
                          for execution in execution_list]
     # get average run time in minutes
     average_mins = sum(execution_seconds) / max(len(execution_seconds), 1) / 60
