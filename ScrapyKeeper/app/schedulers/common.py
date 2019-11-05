@@ -167,7 +167,7 @@ def _get_spider_average_run_stats(project_id, spider_id) -> float:
     average_requests = sum(requests_counters) / max(len(requests_counters), 1)
 
     execution_seconds = [(datetime.strptime(execution['end_time'], '%Y-%m-%d %H:%M:%S')
-                          - datetime.strptime(execution['start_time'], '%Y-%m-%d %H:%M:%S')).seconds
+                          - datetime.strptime(execution['start_time'], '%Y-%m-%d %H:%M:%S')).total_seconds()
                          for execution in execution_list]
     # get average run time in minutes
     average_seconds = sum(execution_seconds) / max(len(execution_seconds), 1) / 60
