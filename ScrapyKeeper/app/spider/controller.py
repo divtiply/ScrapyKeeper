@@ -542,7 +542,7 @@ def job_dashboard(project_id):
     spider_colours = {}
 
     for spider_name in unique_spiders:
-        spider_id, old_items_count = JobExecution.get_last_execution_by_spider(spider_name)
+        spider_id, old_items_count = JobExecution.get_last_execution_by_spider(spider_name, project_id)
         if not old_items_count:
             spider_colours[spider_name] = {
                 'colour': None,
@@ -742,6 +742,13 @@ def spider_egg_upload(project_id):
         flash('deploy success!')
     return redirect(request.referrer)
 
+@app.route("/project/<project_id>/spider/<spider_id>/auto-schedule-switch")
+def project_spider_auto_schedule(project_id, spider_id):
+    spider_instance = SpiderInstance.query.filter_by(project_id=project_id, id=spider_id).first()
+    spider_instance.auto_schedule = False if spider_instance.auto_schedule else True
+    db.session.commit()
+
+    return redirect(request.referrer, code=302)
 
 @app.route("/project/<project_id>/<spider_id>/stats")
 def project_stats(project_id, spider_id):

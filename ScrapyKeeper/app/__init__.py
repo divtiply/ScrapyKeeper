@@ -109,12 +109,12 @@ app.register_blueprint(api_spider_bp)
 
 # start sync job status scheduler
 from ScrapyKeeper.app.schedulers.common import sync_job_execution_status_job, sync_spiders, \
-    reload_runnable_spider_job_execution
+    reload_runnable_spider_job_execution, run_spiders_dynamically
 
 scheduler.add_job(sync_job_execution_status_job, 'interval', seconds=10, id='sys_sync_status', replace_existing=True)
 scheduler.add_job(sync_spiders, 'interval', seconds=120, id='sys_sync_spiders', replace_existing=True)
 scheduler.add_job(reload_runnable_spider_job_execution, 'interval', seconds=300, id='sys_reload_job', replace_existing=True)
-
+scheduler.add_job(run_spiders_dynamically, 'interval', seconds=300, id='sys_reload_job', replace_existing=True)
 
 def start_scheduler():
     scheduler.start()
