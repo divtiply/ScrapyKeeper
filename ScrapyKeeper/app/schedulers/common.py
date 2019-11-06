@@ -1,10 +1,9 @@
 import time
+from datetime import datetime
 
 from ScrapyKeeper import config
-
 from ScrapyKeeper.app import scheduler, app, agent, JobExecution, db
 from ScrapyKeeper.app.spider.model import Project, JobInstance, SpiderInstance, JobRunType, JobPriority
-from datetime import datetime
 
 
 def sync_job_execution_status_job():
@@ -82,14 +81,14 @@ def reload_runnable_spider_job_execution():
         app.logger.info('[drop_spider_job][job_id:%s]' % invalid_job_id)
 
 
-def run_spiders_by_algorithm():
+def run_spiders_dynamically():
     """
     Run all the spiders when needed
     :return:
     """
     for project in Project.query.all():
         _run_spiders_for_project(project)
-    app.logger.debug('[run_spiders_by_algorithm]')
+    app.logger.debug('[run_spiders_dynamically]')
 
 
 def _run_spiders_for_project(project: Project):
@@ -193,7 +192,7 @@ def _run_spider(spider_name, project_id):
     job_instance.enabled = -1
 
     # settings for tempering the requests
-    requests_concurrency_arg = _set_throttle_args(spider_name, project_id)
+    requests_concurrency_arg = _get_throttle_args(spider_name, project_id)
     job_instance.spider_arguments = requests_concurrency_arg
 
     db.session.add(job_instance)
@@ -202,7 +201,7 @@ def _run_spider(spider_name, project_id):
     agent.start_spider(job_instance)
 
 
-def _set_throttle_args(spider_name, project_id):
+def _get_throttle_args(spider_name, project_id):
     """
     Find the AUTOTHROTTLE_TARGET_CONCURRENCY for this request
     :param spider_id:

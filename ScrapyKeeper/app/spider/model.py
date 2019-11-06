@@ -368,11 +368,16 @@ class JobExecution(Base):
     @classmethod
     def list_spider_stats(cls, project_id, spider_id):
         result = []
+        spider_name = None
         for spider in SpiderInstance.query.filter_by(project_id=project_id, id=spider_id).all():
             spider_name = spider.spider_name
+
         job_instances = []
-        for job_instance in JobInstance.query.filter_by(spider_name=spider_name).order_by(desc(JobInstance.id)).limit(
-                10).all():
+        if spider_name is None:
+            # it has no point in going on if the spider name was not fetched
+            return result
+        for job_instance in JobInstance.query.filter_by(spider_name=spider_name, project_id=project_id).order_by(
+                desc(JobInstance.id)).limit(10).all():
             job_instances.append(job_instance.id)
         for job_execution in JobExecution.query.filter_by(running_status=SpiderStatus.FINISHED).filter(
                 JobExecution.job_instance_id.in_(job_instances)).order_by(desc(JobExecution.id)).all():
@@ -459,9 +464,9 @@ class JobExecution(Base):
                     AND S.project_id = :project_id
                 LIMIT 1''')
 
-        result = db.engine.execute(sql, spider_id=spider_id, project_id=project_id)
+        result = db.engine.execute(sql, spider_id=spider_id, project_id=project_id).first()
 
-        return result.first()['last_run']
+        return result['last_run'] if result[0] else None
 
 
     @classmethod
