@@ -159,8 +159,6 @@ def _get_spider_average_run_stats(project_id, spider_id) -> float:
     execution_list = JobExecution.list_spider_stats(project_id, spider_id)
     # keep only the latest 10 runs
     execution_list = execution_list[-10:]
-    # keep only the runs from the current project (for some reason it returns all the projects)
-    execution_list = [execution for execution in execution_list if execution['project_id'] == project_id]
 
     requests_counters = [execution['requests_count'] for execution in execution_list]
     average_requests = sum(requests_counters) / max(len(requests_counters), 1)
@@ -204,7 +202,7 @@ def _run_spider(spider_name, project_id):
 def _get_throttle_args(spider_name, project_id):
     """
     Find the AUTOTHROTTLE_TARGET_CONCURRENCY for this request
-    :param spider_id:
+    :param spider_name:
     :param project_id:
     :return:
     """
@@ -214,8 +212,6 @@ def _get_throttle_args(spider_name, project_id):
     execution_list = JobExecution.list_spider_stats(project_id, spider_instance.id)
     # keep only the latest 10 runs
     execution_list = execution_list[-10:]
-    # keep only the runs from the current project (for some reason it returns all the projects)
-    execution_list = [execution for execution in execution_list if execution['project_id'] == project_id]
 
     execution_seconds = [(datetime.strptime(execution['end_time'], '%Y-%m-%d %H:%M:%S')
                           - datetime.strptime(execution['start_time'], '%Y-%m-%d %H:%M:%S')).total_seconds()
