@@ -1,5 +1,5 @@
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from ScrapyKeeper import config
 from ScrapyKeeper.app import scheduler, app, agent, JobExecution, db
@@ -227,7 +227,7 @@ def _get_throttle_args(spider_name, project_id):
     # now we'll have to only keep the number with a min of .5 and a max of 10
     time_spent_ratio = max(time_spent_ratio, 0.5)
     time_spent_ratio = min(time_spent_ratio, 10)
-    autothrottle_to_set = config.DEFAULT_AUTOTHROTTLE_MAX_CONCURRENCY / time_spent_ratio
+    autothrottle_to_set = round(config.DEFAULT_AUTOTHROTTLE_MAX_CONCURRENCY / time_spent_ratio)
 
     requests_concurrency_arg = "setting=AUTOTHROTTLE_TARGET_CONCURRENCY={}".format(autothrottle_to_set)
 
@@ -244,8 +244,8 @@ def _spider_should_run(spider_id, spider_avg_load, current_run_load):
     spider = SpiderInstance.query.get(spider_id)
     last_run = JobExecution.get_last_spider_execution(spider.id, spider.project_id)
 
-    if last_run is not None and last_run > datetime.today().replace(hour=0, minute=0, second=0):
-        # test the crawler didn't run today
+    if not _spider_should_run_today(spider, last_run):
+        # test the crawler didn't run today (or in the last week for sellers)
         return False
 
     pending_instances = JobExecution.get_pending_jobs_by_spider_name(spider.spider_name, spider.project_id)
@@ -268,4 +268,22 @@ def _spider_should_run(spider_id, spider_avg_load, current_run_load):
 
     return True
 
-def _spider_
+
+def _spider_should_run_today(spider, last_run):
+    """
+    Check if the spider is allowed to run today
+    :param spider:
+    :param last_run:
+    :return:
+    """
+    if 'sellers.' in spider.spider_name:
+        # sellers should only run once a week
+        reference_time = datetime.today().replace(hour=0, minute=0, second=0) - timedelta(days=7)
+    else:
+        # if is not a seller it should run if it didn't run today
+        reference_time = datetime.today().replace(hour=0, minute=0, second=0)
+
+    if last_run is not None and last_run > reference_time:
+        return False
+
+    return True
