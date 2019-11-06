@@ -267,3 +267,5 @@ def _spider_should_run(spider_id, spider_avg_load, current_run_load):
         return False
 
     return True
+
+def _spider_
