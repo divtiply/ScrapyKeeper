@@ -186,7 +186,7 @@ def _run_spider(spider_name, project_id):
     job_instance.spider_name = spider_name
     job_instance.priority = JobPriority.NORMAL
     job_instance.run_type = JobRunType.ONETIME
-    job_instance.overlapping = False
+    job_instance.overlapping = True
     job_instance.enabled = -1
 
     # settings for tempering the requests

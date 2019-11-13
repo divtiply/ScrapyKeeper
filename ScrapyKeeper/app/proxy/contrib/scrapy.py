@@ -63,6 +63,17 @@ class ScrapydProxy(SpiderServiceProxy):
                     result[_status].append(dict(id=item['id'], start_time=start_time, end_time=end_time))
         return result if not spider_status else result[spider_status]
 
+    def back_in_time(self, project_name, spider_name, arguments):
+        post_data = dict(project=project_name, spider=spider_name)
+        post_data.update(arguments)
+        data = request("post", self._scrapyd_url() + "/backintime.json", data=post_data, return_type="json")
+        if data and data['status'] == 'ok':
+            return data['jobid']
+        else:
+            import time
+            time.sleep(3)
+            return self.start_spider(project_name, spider_name, arguments)
+
     def start_spider(self, project_name, spider_name, arguments):
         post_data = dict(project=project_name, spider=spider_name)
         post_data.update(arguments)
