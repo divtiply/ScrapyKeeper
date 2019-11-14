@@ -113,23 +113,16 @@ def _run_spiders_for_project(project: Project):
     # sort the list from the one with least requests to the one with most
     spiders_by_avg_run_load = sorted(spiders_by_avg_run_load, key=lambda i: i['avg_load'])
 
-    # gather a list of active spiders only
-    active_spiders_avg_run_load = [spider['avg_load'] for spider in spiders_by_avg_run_load if spider['avg_load'] > 0]
-    # compute the avg load time for those spiders
-    active_spiders_avg_run_load = sum(active_spiders_avg_run_load) / max(len(active_spiders_avg_run_load), 1)
-    active_spiders_avg_run_load = active_spiders_avg_run_load if active_spiders_avg_run_load > 0 \
-        else config.DEFAULT_LOAD_TO_ADD
-
     # run the spiders that we have to run
     for spider_to_run in spiders_by_avg_run_load:
         spider_avg_load = spider_to_run['avg_load'] if spider_to_run['avg_load'] > 0 else \
-                active_spiders_avg_run_load
+                config.DEFAULT_AUTOTHROTTLE_MAX_CONCURRENCY
 
         if _spider_should_run(spider_to_run['spider_id'], spider_avg_load, current_run_load):
             _run_spider(spider_to_run['spider_name'], project.id)
             current_run_load += spider_avg_load
 
-        if current_run_load >= config.MAX_REQUESTS_PER_MINUTE_ALLOWED:
+        if current_run_load >= config.MAX_LOAD_ALLOWED:
             # the load is already to the max, we can't add anything
             break
 
@@ -142,14 +135,8 @@ def _get_current_run_load(project_id) -> float:
     """
     running_jobs = JobExecution.list_running_jobs(project_id)
 
-    running_avg = []
-    for running_job in running_jobs:
-        spider_name = running_job['job_instance']['spider_name']
-        spider_id = SpiderInstance.get_spider_by_name_and_project_id(spider_name, project_id).id
-
-        running_avg.append(_get_spider_average_run_stats(project_id, spider_id))
-
-    total_load = sum(running_avg) / max(len(running_avg), 1)
+    current_jobs_load = [running_job['job_instance']['throttle_concurrency'] for running_job in running_jobs]
+    total_load = sum(current_jobs_load)
 
     return total_load
 
@@ -160,18 +147,10 @@ def _get_spider_average_run_stats(project_id, spider_id) -> float:
     # keep only the latest 10 runs
     execution_list = execution_list[-10:]
 
-    requests_counters = [execution['requests_count'] for execution in execution_list]
-    average_requests = sum(requests_counters) / max(len(requests_counters), 1)
+    requests_counters = [execution['job_instance']['throttle_concurrency'] for execution in execution_list]
+    average_load = sum(requests_counters) / max(len(requests_counters), 1)
 
-    execution_seconds = [(datetime.strptime(execution['end_time'], '%Y-%m-%d %H:%M:%S')
-                          - datetime.strptime(execution['start_time'], '%Y-%m-%d %H:%M:%S')).total_seconds()
-                         for execution in execution_list]
-    # get average run time in minutes
-    average_seconds = sum(execution_seconds) / max(len(execution_seconds), 1) / 60
-
-    avg_req_per_min = average_requests / max(average_seconds, 1)
-
-    return avg_req_per_min
+    return average_load
 
 
 def _run_spider(spider_name, project_id):
@@ -190,8 +169,9 @@ def _run_spider(spider_name, project_id):
     job_instance.enabled = -1
 
     # settings for tempering the requests
-    requests_concurrency_arg = _get_throttle_args(spider_name, project_id)
-    job_instance.spider_arguments = requests_concurrency_arg
+    throttle_value = _get_throttle_value(spider_name, project_id)
+    job_instance.spider_arguments = "setting=AUTOTHROTTLE_TARGET_CONCURRENCY={}".format(throttle_value)
+    job_instance.throttle_concurrency = throttle_value
 
     db.session.add(job_instance)
     db.session.commit()
@@ -199,7 +179,7 @@ def _run_spider(spider_name, project_id):
     agent.start_spider(job_instance)
 
 
-def _get_throttle_args(spider_name, project_id):
+def _get_throttle_value(spider_name, project_id):
     """
     Find the AUTOTHROTTLE_TARGET_CONCURRENCY for this request
     :param spider_name:
@@ -221,7 +201,7 @@ def _get_throttle_args(spider_name, project_id):
 
     if average_mins == 0:
         # when we don't have any info about past runs
-        return None
+        return config.DEFAULT_AUTOTHROTTLE_MAX_CONCURRENCY
 
     time_spent_ratio = float(1440 / average_mins)  # the ratio reported to 1 day
     # now we'll have to only keep the number with a min of .5 and a max of 10
@@ -229,9 +209,7 @@ def _get_throttle_args(spider_name, project_id):
     time_spent_ratio = min(time_spent_ratio, 10)
     autothrottle_to_set = round(config.DEFAULT_AUTOTHROTTLE_MAX_CONCURRENCY / time_spent_ratio)
 
-    requests_concurrency_arg = "setting=AUTOTHROTTLE_TARGET_CONCURRENCY={}".format(autothrottle_to_set)
-
-    return requests_concurrency_arg
+    return autothrottle_to_set
 
 
 def _spider_should_run(spider_id, spider_avg_load, current_run_load):
@@ -262,7 +240,7 @@ def _spider_should_run(spider_id, spider_avg_load, current_run_load):
         # check if the marker from the DB allows auto scheduling
         return False
 
-    if current_run_load + spider_avg_load > config.MAX_REQUESTS_PER_MINUTE_ALLOWED:
+    if current_run_load + spider_avg_load > config.MAX_LOAD_ALLOWED:
         # check that the load is still under control
         return False
 

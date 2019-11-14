@@ -117,6 +117,7 @@ class JobInstance(Base):
     project_id = db.Column(db.INTEGER, nullable=False, index=True)
     tags = db.Column(db.Text)  # job tag(split by , )
     spider_arguments = db.Column(db.Text)  # job execute arguments(split by , ex.: arg1=foo,arg2=bar)
+    throttle_concurrency = db.Column(db.INTEGER)
     priority = db.Column(db.INTEGER)
     desc = db.Column(db.Text)
     cron_minutes = db.Column(db.String(20), default="0")
@@ -134,6 +135,7 @@ class JobInstance(Base):
             spider_name=self.spider_name,
             tags=self.tags.split(',') if self.tags else None,
             spider_arguments=self.spider_arguments,
+            throttle_concurrency=self.throttle_concurrency,
             priority=self.priority,
             desc=self.desc,
             cron_minutes=self.cron_minutes,
@@ -379,7 +381,8 @@ class JobExecution(Base):
         for job_instance in JobInstance.query.filter_by(spider_name=spider_name, project_id=project_id).order_by(
                 desc(JobInstance.id)).limit(10).all():
             job_instances.append(job_instance.id)
-        for job_execution in JobExecution.query.filter_by(running_status=SpiderStatus.FINISHED).filter(
+        for job_execution in JobExecution.query.filter_by(running_status=SpiderStatus.FINISHED)\
+                .join(JobInstance, JobExecution.job_instance_id == JobInstance.id).filter(
                 JobExecution.job_instance_id.in_(job_instances)).order_by(desc(JobExecution.id)).all():
             result.append(job_execution.to_dict())
         result.reverse()

@@ -53,8 +53,7 @@ SENTRY_URI = os.getenv('SENTRY_URI', None)
 
 DEFAULT_TIMEOUT = 30  # seconds
 
-MAX_REQUESTS_PER_MINUTE_ALLOWED = int(os.getenv('MAX_REQUESTS_PER_MINUTE_ALLOWED', 5000))
-DEFAULT_LOAD_TO_ADD = 1000  # default requests / min to consider for a new spider
+MAX_LOAD_ALLOWED = int(os.getenv('MAX_LOAD_ALLOWED', 25))
 
 DEFAULT_AUTOTHROTTLE_MAX_CONCURRENCY = 10
 
