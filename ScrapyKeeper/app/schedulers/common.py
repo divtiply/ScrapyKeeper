@@ -2,7 +2,7 @@ import time
 from datetime import datetime, timedelta
 
 from ScrapyKeeper import config
-from ScrapyKeeper.app import scheduler, app, agent, JobExecution, db, SpiderSetup
+from ScrapyKeeper.app import scheduler, app, agent, JobExecution, db
 from ScrapyKeeper.app.spider.model import Project, JobInstance, SpiderInstance, JobRunType, JobPriority
 
 
@@ -220,7 +220,6 @@ def _spider_should_run(spider_id, spider_avg_load, current_run_load):
     :return:
     """
     spider = SpiderInstance.query.get(spider_id)
-    spider_setup = SpiderSetup.get_spider_setup(spider)
     last_run = JobExecution.get_last_spider_execution(spider.id, spider.project_id)
 
     if not _spider_should_run_today(spider, last_run):
@@ -237,7 +236,7 @@ def _spider_should_run(spider_id, spider_avg_load, current_run_load):
         # check that another instance of the same crawler is running
         return False
 
-    if spider_setup.auto_schedule is False:
+    if spider.auto_schedule is False:
         # check if the marker from the DB allows auto scheduling
         return False
 

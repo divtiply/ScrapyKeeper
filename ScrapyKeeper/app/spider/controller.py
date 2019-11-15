@@ -13,7 +13,7 @@ from flask import session
 from flask_restful_swagger import swagger
 from werkzeug.utils import secure_filename
 
-from ScrapyKeeper.app import db, api, agent, app, SpiderSetup
+from ScrapyKeeper.app import db, api, agent, app
 from ScrapyKeeper.app.spider import helper
 from ScrapyKeeper.app.spider.model import JobInstance, Project, JobExecution, SpiderInstance, JobRunType
 
@@ -745,8 +745,7 @@ def spider_egg_upload(project_id):
 @app.route("/project/<project_id>/spider/<spider_id>/auto-schedule-switch")
 def project_spider_auto_schedule(project_id, spider_id):
     spider_instance = SpiderInstance.query.filter_by(project_id=project_id, id=spider_id).first()
-    spider_setup = SpiderSetup.get_spider_setup(spider_instance)
-    spider_setup.auto_schedule = False if spider_setup.auto_schedule else True
+    spider_instance.auto_schedule = False if spider_instance.auto_schedule else True
     db.session.commit()
 
     return redirect(request.referrer, code=302)

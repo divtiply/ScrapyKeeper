@@ -23,7 +23,7 @@
                 <td>{{ spider_instance.spider_last_runtime }}</td>
                 <td>{{ readable_time(spider_instance.spider_avg_runtime) }}</td>
                 <td>
-                    {% if spider_instance.spider_setup.auto_schedule == 1 %}
+                    {% if spider_instance.auto_schedule == 1 %}
                         <a href="/project/{{ project.id }}/spider/{{ spider_instance.spider_instance_id }}/auto-schedule-switch" class="label label-success">enabled</a>
                     {% else %}
                         <a href="/project/{{ project.id }}/spider/{{ spider_instance.spider_instance_id }}/auto-schedule-switch" class="label label-danger">disabled</a>
