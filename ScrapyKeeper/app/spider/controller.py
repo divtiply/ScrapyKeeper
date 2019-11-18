@@ -654,6 +654,35 @@ def job_addlist(project_id):
     return redirect(request.referrer, code=302)
 
 
+@app.route("/project/<project_id>/job/back-in-time", methods=['post'])
+def job_back_in_time(project_id):
+    project = Project.find_project_by_id(project_id)
+    spider_names = request.form.getlist('spider_name')
+    for spider in spider_names:
+        job_instance = JobInstance()
+        job_instance.project_id = project_id
+        job_instance.spider_name = spider
+
+        args = "--callback={} {} SCRAPY_PROJECT=backintime".format(request.form['callback'], request.form['spider_arguments'])
+        job_instance.spider_arguments = args
+        job_instance.priority = request.form.get('priority', 0)
+        job_instance.run_type = JobRunType.ONETIME
+        job_instance.overlapping = True
+        # chose daemon manually
+        if request.form['daemon'] != 'auto':
+            spider_args = []
+            if request.form['spider_arguments']:
+                spider_args = request.form['spider_arguments'].split(",")
+            spider_args.append("daemon={}".format(request.form['daemon']))
+            job_instance.spider_arguments = ','.join(spider_args)
+
+        job_instance.enabled = -1
+        db.session.add(job_instance)
+        db.session.commit()
+        agent.run_back_in_time(job_instance)
+    return redirect(request.referrer, code=302)
+
+
 @app.route("/project/<project_id>/jobexecs/<job_exec_id>/stop")
 def job_stop(project_id, job_exec_id):
     job_execution = JobExecution.query.filter_by(project_id=project_id, id=job_exec_id).first()

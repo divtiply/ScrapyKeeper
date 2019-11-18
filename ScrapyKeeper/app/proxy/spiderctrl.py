@@ -145,6 +145,47 @@ class SpiderAgent:
 
         return len(running_jobs) > 0
 
+    def run_back_in_time(self, job_instance):
+        # prevent jobs overlapping for the same spider
+        if not job_instance.overlapping and self._spider_already_running(job_instance.spider_name,
+                                                                         job_instance.project_id):
+            return
+
+        project = Project.find_project_by_id(job_instance.project_id)
+        spider_name = job_instance.spider_name
+        from collections import defaultdict
+        arguments = defaultdict(list)
+        if job_instance.spider_arguments:
+            for k, v in list(map(lambda x: x.strip().split('=', 1), job_instance.spider_arguments.split(','))):
+                arguments[k].append(v)
+        threshold = 0
+        daemon_size = len(self.spider_service_instances)
+        if job_instance.priority == JobPriority.HIGH:
+            threshold = int(daemon_size / 2)
+        if job_instance.priority == JobPriority.HIGHEST:
+            threshold = int(daemon_size)
+        threshold = 1 if threshold == 0 else threshold
+        candidates = self.spider_service_instances
+        leaders = []
+        if 'daemon' in arguments:
+            for candidate in candidates:
+                if candidate.server == arguments['daemon'][0]:
+                    leaders = [candidate]
+        else:
+            # TODO optimize some better func to vote the leader
+            for i in range(threshold):
+                leaders.append(random.choice(candidates))
+        for leader in leaders:
+            service_job_id = leader.back_in_time(project.project_name, spider_name, arguments)
+            job_execution = JobExecution()
+            job_execution.project_id = job_instance.project_id
+            job_execution.service_job_execution_id = service_job_id
+            job_execution.job_instance_id = job_instance.id
+            job_execution.create_time = datetime.datetime.now()
+            job_execution.running_on = leader.server
+            db.session.add(job_execution)
+            db.session.commit()
+
     def start_spider(self, job_instance):
         # prevent jobs overlapping for the same spider
         if not job_instance.overlapping and self._spider_already_running(job_instance.spider_name,
