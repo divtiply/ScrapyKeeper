@@ -144,6 +144,8 @@ def _get_current_run_load(project_id) -> float:
 def _get_spider_average_run_stats(project_id, spider_id) -> float:
     # grab only execution that finished successfully
     execution_list = JobExecution.list_spider_stats(project_id, spider_id)
+    # filter those runs that have finished "successfully" but without having any statistic
+    execution_list = [job_execution for job_execution in execution_list if job_execution['requests_count']]
     # keep only the latest 10 runs
     execution_list = execution_list[-10:]
 
