@@ -37,7 +37,6 @@ class SpiderInstance(Base):
 
     spider_name = db.Column(db.String(100))
     project_id = db.Column(db.INTEGER, nullable=False, index=True)
-    auto_schedule = db.Column(db.BOOLEAN, nullable=False, default=True)
 
     @classmethod
     def get_spider_by_name_and_project_id(cls, spider_name, project_id):
@@ -49,8 +48,12 @@ class SpiderInstance(Base):
             existed_spider_instance = cls.query.filter_by(project_id=project_id,
                                                           spider_name=spider_instance.spider_name).first()
             if not existed_spider_instance:
+                # create the spider
                 db.session.add(spider_instance)
                 db.session.commit()
+
+                # create spider setup
+                SpiderSetup.update_spider_setup(spider_instance)
 
         for spider in cls.query.filter_by(project_id=project_id).all():
             existed_spider = any(
@@ -68,8 +71,7 @@ class SpiderInstance(Base):
     def to_dict(self):
         return dict(spider_instance_id=self.id,
                     spider_name=self.spider_name,
-                    project_id=self.project_id,
-                    auto_schedule=self.auto_schedule)
+                    project_id=self.project_id)
 
     @classmethod
     def list_spiders(cls, project_id):
@@ -93,12 +95,49 @@ class SpiderInstance(Base):
             (spider_name, avg_run_time) for spider_name, avg_run_time in db.engine.execute(sql_avg_runtime))
         res = []
         for spider in cls.query.filter_by(project_id=project_id).all():
+            spider_setup = SpiderSetup.get_spider_setup(spider)
             last_runtime = last_runtime_list.get(spider.spider_name)
             res.append(dict(spider.to_dict(),
                             **{'spider_last_runtime': last_runtime if last_runtime else '-',
-                               'spider_avg_runtime': avg_runtime_list.get(spider.spider_name)
+                               'spider_avg_runtime': avg_runtime_list.get(spider.spider_name),
+                               'spider_setup': spider_setup.to_dict()
                                }))
         return res
+
+
+class SpiderSetup(Base):
+    __tablename__ = 'sk_spider_setup'
+
+    spider_name = db.Column(db.String(100))
+    project_id = db.Column(db.INTEGER, nullable=False, index=True)
+    auto_schedule = db.Column(db.BOOLEAN, nullable=False, default=True)
+
+    @classmethod
+    def update_spider_setup(cls, spider_instance):
+        existing_spider_setup = cls.query.filter_by(project_id=spider_instance.project_id,
+                                                    spider_name=spider_instance.spider_name).first()
+
+        if not existing_spider_setup:
+            new_spider_setup = cls()
+            new_spider_setup.spider_name = spider_instance.spider_name
+            new_spider_setup.project_id = spider_instance.project_id
+            new_spider_setup.auto_schedule = True
+
+            db.session().add(new_spider_setup)
+            db.session().commit()
+
+    @classmethod
+    def get_spider_setup(cls, spider_instance):
+        spider_setup = cls.query.filter_by(project_id=spider_instance.project_id,
+                                           spider_name=spider_instance.spider_name).first()
+
+        return spider_setup
+
+    def to_dict(self):
+        return dict(spider_instance_id=self.id,
+                    spider_name=self.spider_name,
+                    project_id=self.project_id,
+                    auto_schedule=self.auto_schedule)
 
 
 class JobPriority():
