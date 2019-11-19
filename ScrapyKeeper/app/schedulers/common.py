@@ -149,7 +149,8 @@ def _get_spider_average_run_stats(project_id, spider_id) -> float:
     # keep only the latest 10 runs
     execution_list = execution_list[-10:]
 
-    requests_counters = [execution['job_instance']['throttle_concurrency'] for execution in execution_list]
+    requests_counters = [execution['job_instance']['throttle_concurrency'] for execution in execution_list
+                         if execution['job_instance']['throttle_concurrency'] is not None]
     average_load = sum(requests_counters) / max(len(requests_counters), 1)
 
     return average_load
