@@ -3,8 +3,10 @@ import random
 import requests
 import re
 
-from ScrapyKeeper.app import db
+from ScrapyKeeper.app import db, app
 from ScrapyKeeper.app.spider.model import SpiderStatus, JobExecution, JobInstance, Project, JobPriority
+from ScrapyKeeper.app.util.config import get_cluster_instances_ids, get_instances_private_ips
+from ScrapyKeeper.app.util.cluster import get_instance_memory_usage
 
 
 class SpiderServiceProxy(object):
@@ -122,7 +124,7 @@ class SpiderAgent:
                     job_execution.start_time = job_execution_info['start_time']
                     job_execution.end_time = job_execution_info['end_time']
                     job_execution.running_status = SpiderStatus.FINISHED
-                    
+
                     res = requests.get(self.log_url(job_execution))
                     res.encoding = 'utf8'
                     raw = res.text[-4096:]
@@ -216,9 +218,21 @@ class SpiderAgent:
                 if candidate.server == arguments['daemon'][0]:
                     leaders = [candidate]
         else:
+            instance_ids = get_cluster_instances_ids(app)
+            instance_stats = {}
+            for i in instance_ids:
+                ips = get_instances_private_ips(app, [i])
+                ip = ips.pop(0)
+                instance_stats[ip] = get_instance_memory_usage(app, i)
+
+            ip, _ = sorted(instance_stats.items(), key=lambda kv: kv[1]).pop(0)
+
             # TODO optimize some better func to vote the leader
             for i in range(threshold):
-                leaders.append(random.choice(candidates))
+                for candidate in candidates:
+                    if ip in candidate.server:
+                        leaders.append(candidate)
+
         for leader in leaders:
             service_job_id = leader.start_spider(project.project_name, spider_name, arguments)
             job_execution = JobExecution()
