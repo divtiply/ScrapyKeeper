@@ -225,7 +225,7 @@ class SpiderAgent:
                 ip = ips.pop(0)
                 instance_stats[ip] = get_instance_memory_usage(app, i)
 
-            ip, _ = sorted(instance_stats.items(), key=lambda kv: kv[1]).pop(0)
+            ip, _ = sorted(instance_stats.items(), key=lambda kv: kv[1] or 0).pop(0)
 
             # TODO optimize some better func to vote the leader
             for i in range(threshold):
