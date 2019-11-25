@@ -79,7 +79,7 @@ class ScrapydProxy(SpiderServiceProxy):
         post_data = dict(project=project_name, spider=spider_name)
         post_data.update(arguments)
         data = request("post", self._scrapyd_url() + "/schedule.json", data=post_data, return_type="json")
-        app.logger.warn("The response from {} was {}".format(self._scrapyd_url(), data['status'] if data else data.status_code))
+        app.logger.warn("The response from {} was {} after request with {}".format(self._scrapyd_url(), data['status'] if data else data.status_code, post_data))
         if data and data['status'] == 'ok':
             return data['jobid']
         else:
