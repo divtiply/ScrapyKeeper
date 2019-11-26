@@ -97,6 +97,8 @@ def _run_spiders_for_project(project: Project):
     :param project:
     :return:
     """
+    started_spiders = 0
+
     # grab the list with all the spiders in the project
     spider_list = [spider_instance.to_dict() for spider_instance in
                    SpiderInstance.query.filter_by(project_id=project.id).order_by(
@@ -115,16 +117,20 @@ def _run_spiders_for_project(project: Project):
 
     # run the spiders that we have to run
     for spider_to_run in spiders_by_avg_run_load:
+        if started_spiders >= config.MAX_SPIDERS_START_AT_ONCE:
+            return
+
         spider_avg_load = spider_to_run['avg_load'] if spider_to_run['avg_load'] > 0 else \
                 config.DEFAULT_AUTOTHROTTLE_MAX_CONCURRENCY
 
         if _spider_should_run(spider_to_run['spider_id'], spider_avg_load, current_run_load):
             _run_spider(spider_to_run['spider_name'], project.id)
+            started_spiders += 1
             current_run_load += spider_avg_load
 
         if current_run_load >= config.MAX_LOAD_ALLOWED:
             # the load is already to the max, we can't add anything
-            break
+            return
 
 
 def _get_current_run_load(project_id) -> float:
