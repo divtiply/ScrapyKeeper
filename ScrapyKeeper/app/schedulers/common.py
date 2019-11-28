@@ -1,6 +1,6 @@
 import time
 from datetime import datetime, timedelta
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from ScrapyKeeper import config
 from ScrapyKeeper.app import scheduler, app, agent, JobExecution, db, SpiderSetup
 from ScrapyKeeper.app.spider.model import Project, JobInstance, SpiderInstance, JobRunType, JobPriority, SpiderStatus
@@ -105,7 +105,10 @@ def _run_spiders_for_project(project: Project):
            .outerjoin(JobInstance, (JobInstance.spider_name == SpiderInstance.spider_name) & (
                    JobInstance.project_id == SpiderInstance.project_id)) \
            .outerjoin(JobExecution, JobExecution.job_instance_id == JobInstance.id) \
-           .filter(JobExecution.running_status == SpiderStatus.FINISHED) \
+           .filter(or_(
+                JobExecution.running_status == SpiderStatus.FINISHED, JobInstance.id.is_(None),
+                JobExecution.running_status != SpiderStatus.FINISHED
+            )) \
            .group_by(SpiderInstance.id) \
            .order_by(func.max(JobExecution.start_time)) \
            .all()
