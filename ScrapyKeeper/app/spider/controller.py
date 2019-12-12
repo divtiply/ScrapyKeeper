@@ -891,6 +891,8 @@ def project_stats(project_id, spider_id):
             (min_items_count, average_items_count, max_items_count) = _compute_item_stats(old_items_count,
                                                                                           last_items_count)
 
+        last_runs = JobExecution.list_latest_jobs_for_spider(project.id, spider.spider_name)
+
         return render_template("spider_stats.html", spider=spider, start_time=start_time, end_time=end_time,
                                end_time_short=end_time_short, duration_time=duration_time,
                                last_start_time=last_start_time, last_items_count=last_items_count,
@@ -899,7 +901,7 @@ def project_stats(project_id, spider_id):
                                requests_count=requests_count, items_count=items_count, items_cached=items_cached,
                                warnings_count=warnings_count, errors_count=errors_count,
                                bytes_count=bytes_count, retries_count=retries_count, exceptions_count=exceptions_count,
-                               exceptions_size=exceptions_size,
+                               exceptions_size=exceptions_size, last_runs=last_runs,
                                cache_size_count=cache_size_count, cache_object_count=cache_object_count)
 
 
