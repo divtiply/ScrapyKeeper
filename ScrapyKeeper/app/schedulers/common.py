@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from ScrapyKeeper import config
 from ScrapyKeeper.app import scheduler, app, agent, JobExecution, db, SpiderSetup
 from ScrapyKeeper.app.spider.model import Project, JobInstance, SpiderInstance, JobRunType, JobPriority
+from ScrapyKeeper.app.util.cluster import cluster_has_enough_free_memory
 
 
 def sync_job_execution_status_job():
@@ -252,6 +253,10 @@ def _spider_should_run(spider_id, spider_avg_load, current_run_load):
 
     if current_run_load + spider_avg_load > config.MAX_LOAD_ALLOWED:
         # check that the load is still under control
+        return False
+
+    if not cluster_has_enough_free_memory(app):
+        # check if we have enough memory to run the spiders
         return False
 
     return True

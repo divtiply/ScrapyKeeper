@@ -2,6 +2,10 @@ import boto3
 import datetime as dt
 from datetime import datetime
 
+from ScrapyKeeper import config
+from ScrapyKeeper.app import get_cluster_instances_ids
+from ScrapyKeeper.app.util.config import get_instances_private_ips
+
 
 def get_instance_memory_usage(app, instance_id):
     cw_conn = boto3.client('cloudwatch', region_name=app.config.get('AWS_DEFAULT_REGION'))
@@ -37,3 +41,21 @@ def get_instance_memory_usage(app, instance_id):
         return None
 
     return metric_data_results.pop(0).get('Values').pop(0)
+
+
+def cluster_has_enough_free_memory(app):
+    instance_ids = get_cluster_instances_ids(app)
+    instances_by_usage = {}
+    for id in instance_ids:
+        ips = get_instances_private_ips(app, [id])
+        ip = ips.pop(0)
+        instances_by_usage[ip] = get_instance_memory_usage(app, id)
+
+    ip, memory = sorted(instances_by_usage.items(), key=lambda kv: kv[1] or 0).pop(0)
+
+    if memory < config.USED_MEMORY_PERCENT_THRESHOLD:
+        return False
+
+    return True
+
+
