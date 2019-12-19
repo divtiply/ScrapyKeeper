@@ -1,9 +1,9 @@
 import time
 from datetime import datetime, timedelta
-
+from sqlalchemy import func, or_
 from ScrapyKeeper import config
 from ScrapyKeeper.app import scheduler, app, agent, JobExecution, db, SpiderSetup
-from ScrapyKeeper.app.spider.model import Project, JobInstance, SpiderInstance, JobRunType, JobPriority
+from ScrapyKeeper.app.spider.model import Project, JobInstance, SpiderInstance, JobRunType, JobPriority, SpiderStatus
 
 
 def sync_job_execution_status_job():
@@ -100,31 +100,32 @@ def _run_spiders_for_project(project: Project):
     started_spiders = 0
 
     # grab the list with all the spiders in the project
-    spider_list = [spider_instance.to_dict() for spider_instance in
-                   SpiderInstance.query.filter_by(project_id=project.id).order_by(
-                       SpiderInstance.spider_name).all()]
+    spiders_list_by_last_run = SpiderInstance.query \
+           .with_entities(SpiderInstance.id, SpiderInstance.spider_name, func.max(JobExecution.start_time)) \
+           .outerjoin(JobInstance, (JobInstance.spider_name == SpiderInstance.spider_name) & (
+                   JobInstance.project_id == SpiderInstance.project_id)) \
+           .outerjoin(JobExecution, JobExecution.job_instance_id == JobInstance.id) \
+           .filter(or_(
+                JobExecution.running_status == SpiderStatus.FINISHED, JobInstance.id.is_(None),
+                JobExecution.running_status != SpiderStatus.FINISHED
+            )) \
+           .group_by(SpiderInstance.id) \
+           .order_by(func.max(JobExecution.start_time)) \
+           .all()
 
     # compute the current running load
     current_run_load = _get_current_run_load(project.id)
 
-    # gather a list with all the spiders
-    spiders_by_avg_run_load = [{'spider_id': spider['spider_instance_id'],
-                                'spider_name': spider['spider_name'],
-                                'avg_load': _get_spider_average_run_stats(project.id, spider['spider_instance_id'])}
-                               for spider in spider_list]
-    # sort the list from the one with least requests to the one with most
-    spiders_by_avg_run_load = sorted(spiders_by_avg_run_load, key=lambda i: i['avg_load'])
-
     # run the spiders that we have to run
-    for spider_to_run in spiders_by_avg_run_load:
+    for spider_to_run in spiders_list_by_last_run:
         if started_spiders >= config.MAX_SPIDERS_START_AT_ONCE:
             return
 
-        spider_avg_load = spider_to_run['avg_load'] if spider_to_run['avg_load'] > 0 else \
-                config.DEFAULT_AUTOTHROTTLE_MAX_CONCURRENCY
+        spider_avg_load = _get_spider_average_run_stats(project.id, spider_to_run.id)
+        spider_avg_load = spider_avg_load or config.DEFAULT_AUTOTHROTTLE_MAX_CONCURRENCY
 
-        if _spider_should_run(spider_to_run['spider_id'], spider_avg_load, current_run_load):
-            _run_spider(spider_to_run['spider_name'], project.id)
+        if _spider_should_run(spider_to_run.id, spider_avg_load, current_run_load):
+            _run_spider(spider_to_run.spider_name, project.id)
             started_spiders += 1
             current_run_load += spider_avg_load
 
