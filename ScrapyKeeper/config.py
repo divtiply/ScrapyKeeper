@@ -58,4 +58,4 @@ MAX_LOAD_ALLOWED = int(os.getenv('MAX_LOAD_ALLOWED', 250))
 
 DEFAULT_AUTOTHROTTLE_MAX_CONCURRENCY = 10
 
-
+USED_MEMORY_PERCENT_THRESHOLD = 90  # the threshold for launching new spiders
