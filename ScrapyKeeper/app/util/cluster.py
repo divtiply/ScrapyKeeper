@@ -54,8 +54,8 @@ def cluster_has_enough_free_memory(app):
     ip, memory = sorted(instances_by_usage.items(), key=lambda kv: kv[1] or 0).pop(0)
 
     if memory < config.USED_MEMORY_PERCENT_THRESHOLD:
-        return False
+        return True
 
-    return True
+    return False
 
 
