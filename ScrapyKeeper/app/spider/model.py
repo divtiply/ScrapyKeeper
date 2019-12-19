@@ -287,6 +287,23 @@ class JobExecution(Base):
                                 cls.running_status != SpiderStatus.CRASHED).all()
 
     @classmethod
+    def list_latest_jobs_for_spider(cls, project_id, spider_name, limit=5):
+        result = [job_execution.to_dict() for job_execution in
+                             JobExecution.query
+                                 .join(JobInstance, JobExecution.job_instance_id == JobInstance.id)
+                                 .filter(JobInstance.spider_name == spider_name)
+                                 .filter(JobInstance.project_id == project_id)
+                                 .filter(
+                                     (JobExecution.running_status == SpiderStatus.FINISHED) |
+                                     (JobExecution.running_status == SpiderStatus.CANCELED) |
+                                     (JobExecution.running_status == SpiderStatus.CRASHED)
+                                 )
+                                 .order_by(desc(JobExecution.date_modified))
+                                 .limit(limit)]
+
+        return result
+
+    @classmethod
     def list_jobs(cls, project_id, each_status_limit=100):
         result = {}
         result['PENDING'] = [job_execution.to_dict() for job_execution in
