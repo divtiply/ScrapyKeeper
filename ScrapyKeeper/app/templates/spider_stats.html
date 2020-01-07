@@ -33,7 +33,7 @@
                 <th style="width: 10px">Warnings</th>
                 <th style="width: 10px">Errors</th>
                 <th style="width: 10px">Log</th>
-                <th style="width: 10px">Status/Action</th>
+                <th style="width: 10px">Mem used (MB)</th>
             </tr>
             {% for job in last_runs %}
             {% if job.job_instance %}
@@ -72,14 +72,11 @@
                        data-toggle="tooltip" data-placement="top" title="{{ job.service_job_execution_id }}">Log</a>
                 </td>
                 <td>
-                    {% if job.running_status == 2 %}
-                        <span class="label label-success">FINISHED</span>
-                    {% elif job.running_status == 3 %}
-                        <span class="label label-warning">CANCELED</span>
+                    {% if job.memory_used > 0 %}
+                        {{ (job.memory_used / 1024 / 1024)|round(2) }}
                     {% else %}
-                        <span class="label label-danger">CRASHED</span>
+                        -
                     {% endif %}
-                    <a href="/project/{{ project.id }}/jobexecs/{{ job.job_execution_id }}/remove"><span class="label label-danger">REMOVE</span></a>
                 </td>
             </tr>
             {% endif %}
