@@ -1,4 +1,6 @@
 import boto3
+from requests import get
+from requests.exceptions import ConnectionError
 
 
 def get_cluster_servers(app):
@@ -37,6 +39,15 @@ def get_instances_private_ips(app, instance_ids):
     for reservation in detailed_instances.get('Reservations', []):
         for instance in reservation.get('Instances', []):
             ips.append(instance.get('PrivateIpAddress'))
+
+    for ip in ips:
+        scrapyd_url = 'http://{}:6800/daemonstatus.json'.format(ip)
+        try:
+            response = get(scrapyd_url)
+            if '"status": "ok"' not in response.text:
+                ips.remove(ip)
+        except ConnectionError:
+            ips.remove(ip)
 
     if not ips:
         return []

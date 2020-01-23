@@ -222,6 +222,8 @@ class SpiderAgent:
             instance_stats = {}
             for i in instance_ids:
                 ips = get_instances_private_ips(app, [i])
+                if len(ips) < 1:
+                    continue
                 ip = ips.pop(0)
                 instance_stats[ip] = get_instance_memory_usage(app, i)
 

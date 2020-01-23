@@ -48,6 +48,8 @@ def cluster_has_enough_free_memory(app):
     instances_by_usage = {}
     for id in instance_ids:
         ips = get_instances_private_ips(app, [id])
+        if len(ips) < 1:
+            continue
         ip = ips.pop(0)
         instances_by_usage[ip] = get_instance_memory_usage(app, id)
 

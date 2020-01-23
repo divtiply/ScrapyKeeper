@@ -156,7 +156,7 @@ class JobInstance(Base):
     project_id = db.Column(db.INTEGER, nullable=False, index=True)
     tags = db.Column(db.Text)  # job tag(split by , )
     spider_arguments = db.Column(db.Text)  # job execute arguments(split by , ex.: arg1=foo,arg2=bar)
-    throttle_concurrency = db.Column(db.INTEGER)
+    throttle_concurrency = db.Column(db.INTEGER, default=2)
     priority = db.Column(db.INTEGER)
     desc = db.Column(db.Text)
     cron_minutes = db.Column(db.String(20), default="0")

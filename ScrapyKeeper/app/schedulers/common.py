@@ -82,6 +82,8 @@ def reload_runnable_spider_job_execution():
         scheduler.remove_job(invalid_job_id)
         app.logger.info('[drop_spider_job][job_id:%s]' % invalid_job_id)
 
+    app.logger.debug('[reload_runnable_spider_job_execution]')
+
 
 def run_spiders_dynamically():
     """
@@ -90,6 +92,7 @@ def run_spiders_dynamically():
     """
     for project in Project.query.all():
         _run_spiders_for_project(project)
+
     app.logger.debug('[run_spiders_dynamically]')
 
 
@@ -168,9 +171,9 @@ def _get_spider_average_run_stats(project_id, spider_id) -> float:
 def _run_spider(spider_name, project_id):
     """
     Run a spider
-    :param spider_name: 
-    :param project_id: 
-    :return: 
+    :param spider_name:
+    :param project_id:
+    :return:
     """
     job_instance = JobInstance()
     job_instance.project_id = project_id
