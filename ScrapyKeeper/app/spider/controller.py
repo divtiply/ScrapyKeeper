@@ -663,8 +663,11 @@ def job_back_in_time(project_id):
         job_instance.project_id = project_id
         job_instance.spider_name = spider
 
-        args = "--callback={} {} SCRAPY_PROJECT=backintime".format(request.form['callback'], request.form['spider_arguments'])
-        job_instance.spider_arguments = args
+        spider_args = request.form['spider_arguments'].split(",")
+        spider_args.append("--callback={}".format(request.form['callback']))
+        spider_args.append("SCRAPY_PROJECT=SCRAPY_PROJECT")
+        job_instance.spider_arguments = ','.join(spider_args)
+
         job_instance.priority = request.form.get('priority', 0)
         job_instance.run_type = JobRunType.ONETIME
         job_instance.overlapping = True
