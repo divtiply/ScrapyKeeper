@@ -73,7 +73,7 @@ class ScrapydProxy(SpiderServiceProxy):
         else:
             import time
             time.sleep(3)
-            return self.start_spider(project_name, spider_name, arguments)
+            return self.back_in_time(project_name, spider_name, arguments)
 
     def start_spider(self, project_name, spider_name, arguments):
         post_data = dict(project=project_name, spider=spider_name)
