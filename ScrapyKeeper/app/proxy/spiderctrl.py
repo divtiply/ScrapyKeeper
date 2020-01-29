@@ -125,10 +125,9 @@ class SpiderAgent:
                     job_execution.end_time = job_execution_info['end_time']
                     job_execution.running_status = SpiderStatus.FINISHED
 
-                    res = requests.get(self.log_url(job_execution))
+                    res = requests.get(self.log_url(job_execution), headers={"Range": "bytes=-4096"})
                     res.encoding = 'utf8'
-                    raw = res.text[-4096:]
-                    match = re.findall(job_execution.RAW_STATS_REGEX, raw, re.DOTALL)
+                    match = re.findall(job_execution.RAW_STATS_REGEX, res.text, re.DOTALL)
                     if match:
                         job_execution.raw_stats = match[0]
                         job_execution.process_raw_stats()
