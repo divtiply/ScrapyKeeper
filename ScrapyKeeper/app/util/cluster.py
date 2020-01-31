@@ -44,6 +44,9 @@ def get_instance_memory_usage(app, instance_id):
 
 
 def cluster_has_enough_free_memory(app):
+    if not config.RUNS_IN_CLOUD:
+        return True
+
     instance_ids = get_cluster_instances_ids(app)
     instances_by_usage = {}
     for id in instance_ids:
