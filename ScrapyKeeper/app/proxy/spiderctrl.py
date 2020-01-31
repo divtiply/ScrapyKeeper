@@ -3,6 +3,7 @@ import random
 import requests
 import re
 
+from ScrapyKeeper import config
 from ScrapyKeeper.app import db, app
 from ScrapyKeeper.app.spider.model import SpiderStatus, JobExecution, JobInstance, Project, JobPriority
 from ScrapyKeeper.app.util.config import get_cluster_instances_ids, get_instances_private_ips
@@ -216,6 +217,9 @@ class SpiderAgent:
             for candidate in candidates:
                 if candidate.server == arguments['daemon'][0]:
                     leaders = [candidate]
+        elif not config.RUNS_IN_CLOUD:
+            for candidate in candidates:
+                leaders = [candidate]
         else:
             instance_ids = get_cluster_instances_ids(app)
             instance_stats = {}
