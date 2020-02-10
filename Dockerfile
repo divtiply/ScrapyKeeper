@@ -27,13 +27,15 @@ RUN set -xe \
                           libmysqlclient-dev \
     && curl -sSL https://bootstrap.pypa.io/get-pip.py | python3 \
     && pip install git+https://github.com/scrapy/scrapyd.git \
-                   git+https://github.com/scrapy/scrapyd-client.git 
+                   git+https://github.com/scrapy/scrapyd-client.git
 
 ENV TZ=UTC
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
-RUN pip install git+https://github.com/c-lorand/ScrapyKeeper.git
+COPY . /crawlie-keeper
+WORKDIR /crawlie-keeper
+RUN pip install -r requirements.txt
 
 EXPOSE 5000
 
-CMD ["scrapykeeper", "--no-auth"]
+CMD ["python3", "entrypoint.py", "--no-auth"]
