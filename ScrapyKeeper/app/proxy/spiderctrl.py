@@ -97,7 +97,7 @@ class SpiderAgent:
     def sync_job_status(self, project):
         found_jobs = []
 
-        job_execution_list = JobExecution.list_uncomplete_job()
+        job_execution_list = JobExecution.list_uncomplete_job(project)
         job_execution_dict = dict(
             [(job_execution.service_job_execution_id, job_execution) for job_execution in job_execution_list])
 

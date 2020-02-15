@@ -90,6 +90,9 @@ def run_spiders_dynamically():
     Run all the spiders when needed
     :return:
     """
+    if not config.AUTO_SCHEDULE_ENABLED:
+        return
+
     for project in Project.query.all():
         _run_spiders_for_project(project)
 

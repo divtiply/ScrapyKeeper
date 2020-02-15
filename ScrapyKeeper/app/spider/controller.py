@@ -13,6 +13,7 @@ from flask import session
 from flask_restful_swagger import swagger
 from werkzeug.utils import secure_filename
 
+from ScrapyKeeper import config
 from ScrapyKeeper.app import db, api, agent, app, SpiderSetup
 from ScrapyKeeper.app.spider import helper
 from ScrapyKeeper.app.spider.model import JobInstance, Project, JobExecution, SpiderInstance, JobRunType
@@ -566,7 +567,8 @@ def job_dashboard(project_id):
             'spider_id': spider_id
         }
 
-    return render_template("job_dashboard.html", job_status=jobs, spider_colours=spider_colours)
+    return render_template("job_dashboard.html", job_status=jobs, spider_colours=spider_colours,
+                           bit_enabled=config.BACK_IN_TIME_ENABLED)
 
 
 @app.route("/project/<project_id>/job/periodic")
@@ -656,7 +658,9 @@ def job_addlist(project_id):
 
 @app.route("/project/<project_id>/job/back-in-time", methods=['post'])
 def job_back_in_time(project_id):
-    project = Project.find_project_by_id(project_id)
+    if not config.BACK_IN_TIME_ENABLED:
+        return redirect(request.referrer, code=302)
+
     spider_names = request.form.getlist('spider_name')
     for spider in spider_names:
         job_instance = JobInstance()

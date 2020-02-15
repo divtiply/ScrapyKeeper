@@ -4,6 +4,8 @@ import numpy as np
 import re
 from sqlalchemy import desc
 from sqlalchemy.sql import text
+
+from ScrapyKeeper import config
 from ScrapyKeeper.app import db, Base
 from ScrapyKeeper.app.spider import helper
 
@@ -121,7 +123,7 @@ class SpiderSetup(Base):
             new_spider_setup = cls()
             new_spider_setup.spider_name = spider_instance.spider_name
             new_spider_setup.project_id = spider_instance.project_id
-            new_spider_setup.auto_schedule = True
+            new_spider_setup.auto_schedule = config.AUTO_SCHEDULE_DEFAULT_VALUE
 
             db.session().add(new_spider_setup)
             db.session().commit()
@@ -284,10 +286,11 @@ class JobExecution(Base):
         return cls.query.filter(cls.service_job_execution_id.in_(service_job_execution_ids)).all()
 
     @classmethod
-    def list_uncomplete_job(cls):
+    def list_uncomplete_job(cls, project):
         return cls.query.filter(cls.running_status != SpiderStatus.FINISHED,
                                 cls.running_status != SpiderStatus.CANCELED,
-                                cls.running_status != SpiderStatus.CRASHED).all()
+                                cls.running_status != SpiderStatus.CRASHED,
+                                cls.project_id == project.id).all()
 
     @classmethod
     def list_latest_jobs_for_spider(cls, project_id, spider_name, limit=5):
