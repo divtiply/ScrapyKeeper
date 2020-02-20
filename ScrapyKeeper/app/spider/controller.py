@@ -700,10 +700,14 @@ def job_stop(project_id, job_exec_id):
 @app.route("/project/<project_id>/jobexecs/<job_exec_id>/log")
 def job_log(project_id, job_exec_id):
     job_execution = JobExecution.query.filter_by(project_id=project_id, id=job_exec_id).first()
-    res = requests.get(agent.log_url(job_execution))
-    res.encoding = 'utf8'
-    raw = res.text
-    return render_template("job_log.html", log_lines=raw.split('\n'))
+    dim = requests.head(agent.log_url(job_execution)).headers._store.get('content-length', ['', '0'])[1]
+    if int(dim) > 15728640:
+        return redirect(agent.log_url(job_execution), code = 302)
+    else:
+        res = requests.get(agent.log_url(job_execution))
+        res.encoding = 'utf8'
+        raw = res.text
+        return render_template("job_log.html", log_lines=raw.split('\n'))
 
 
 @app.route("/project/<project_id>/jobexecs/<job_exec_id>/remove")
