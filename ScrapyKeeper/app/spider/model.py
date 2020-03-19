@@ -225,6 +225,9 @@ class JobExecution(Base):
     cache_size_count = db.Column(db.Integer, default=0)
     cache_object_count = db.Column(db.Integer, default=0)
     memory_used = db.Column(db.Integer, default=0)
+    vehicles_crawled = db.Column(db.Integer, default=0)
+    vehicles_dropped = db.Column(db.Integer, default=0)
+    stockcount = db.Column(db.Integer, default=0)
     RAW_STATS_REGEX = r'\[scrapy\.statscollectors\][^{]+({[^}]+})'
 
     def process_raw_stats(self):
@@ -243,6 +246,9 @@ class JobExecution(Base):
         self.cache_size_count = stats.get('cache/size/end') or 0
         self.cache_object_count = stats.get('cache/object/keeped') or 0
         self.memory_used = stats.get('memusage/max') or 0
+        self.vehicles_crawled = stats.get('item_vehicles_queued') or 0
+        self.vehicles_dropped = stats.get('item_dropped_count') or 0
+        self.stockcount = stats.get('stockcount') or 0
 
     def has_warnings(self):
         return not self.raw_stats or not self.items_count or self.warnings_count
@@ -274,7 +280,10 @@ class JobExecution(Base):
             'exceptions_count': self.exceptions_count if self.exceptions_count is not None else 0,
             'cache_size_count': self.cache_size_count if self.cache_size_count is not None else 0,
             'cache_object_count': self.cache_object_count if self.cache_object_count is not None else 0,
-            'memory_used': self.memory_used if self.memory_used is not None else 0
+            'memory_used': self.memory_used if self.memory_used is not None else 0,
+            'vehicles_crawled': self.vehicles_crawled if self.vehicles_crawled is not None else 0,
+            'vehicles_dropped': self.vehicles_dropped if self.vehicles_dropped is not None else 0,
+            'stockcount': self.stockcount if self.stockcount is not None else 0,
         }
 
     @classmethod

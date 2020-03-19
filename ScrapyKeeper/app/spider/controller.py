@@ -838,6 +838,9 @@ def project_stats(project_id, spider_id):
         last_start_time = ""
         last_items_count = ""
         old_items_count = []
+        stockcount = []
+        vehicles_crawled = []
+        vehicles_dropped = []
 
         # Display date trick for small charts
         displayDates = False
@@ -871,6 +874,9 @@ def project_stats(project_id, spider_id):
                 end_time_short.append(end_time[-1].split(" ")[1])
 
             requests_count.append(results[i]['requests_count'])
+            stockcount.append(results[i]['stockcount'])
+            vehicles_crawled.append(results[i]['vehicles_crawled'])
+            vehicles_dropped.append(results[i]['vehicles_dropped'])
             items_count.append(results[i]['items_count'])
             if results[i]['items_count'] != 0:
                 if results[i]['items_count'] - results[i]['requests_count'] >= 0:
@@ -913,7 +919,8 @@ def project_stats(project_id, spider_id):
                                warnings_count=warnings_count, errors_count=errors_count,
                                bytes_count=bytes_count, retries_count=retries_count, exceptions_count=exceptions_count,
                                exceptions_size=exceptions_size, last_runs=last_runs,
-                               cache_size_count=cache_size_count, cache_object_count=cache_object_count)
+                               cache_size_count=cache_size_count, cache_object_count=cache_object_count,
+                               stockcount=stockcount, vehicles_crawled=vehicles_crawled, vehicles_dropped=vehicles_dropped)
 
 
 def _compute_item_stats(old_items_count, last_items_count):
