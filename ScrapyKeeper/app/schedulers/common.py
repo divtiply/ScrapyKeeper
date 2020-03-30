@@ -192,7 +192,11 @@ def _run_spider(spider_name, project_id):
     job_instance.throttle_concurrency = throttle_value
 
     db.session.add(job_instance)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        raise e
 
     agent.start_spider(job_instance)
 

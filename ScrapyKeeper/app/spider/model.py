@@ -21,7 +21,11 @@ class Project(Base):
             existed_project = cls.query.filter_by(project_name=project.project_name).first()
             if not existed_project:
                 db.session.add(project)
-                db.session.commit()
+                try:
+                    db.session.commit()
+                except Exception as e:
+                    db.session.rollback()
+                    raise e
 
     @classmethod
     def find_project_by_id(cls, project_id):
@@ -52,7 +56,11 @@ class SpiderInstance(Base):
             if not existed_spider_instance:
                 # create the spider
                 db.session.add(spider_instance)
-                db.session.commit()
+                try:
+                    db.session.commit()
+                except Exception as e:
+                    db.session.rollback()
+                    raise e
 
                 # create spider setup
                 SpiderSetup.update_spider_setup(spider_instance)
@@ -64,7 +72,11 @@ class SpiderInstance(Base):
             )
             if not existed_spider:
                 db.session.delete(spider)
-                db.session.commit()
+                try:
+                    db.session.commit()
+                except Exception as e:
+                    db.session.rollback()
+                    raise e
 
     @classmethod
     def list_spider_by_project_id(cls, project_id):
@@ -126,7 +138,11 @@ class SpiderSetup(Base):
             new_spider_setup.auto_schedule = config.AUTO_SCHEDULE_DEFAULT_VALUE
 
             db.session().add(new_spider_setup)
-            db.session().commit()
+            try:
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                raise e
 
     @classmethod
     def get_spider_setup(cls, spider_instance):
