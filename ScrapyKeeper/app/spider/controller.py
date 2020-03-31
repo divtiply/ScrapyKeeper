@@ -46,7 +46,12 @@ class ProjectCtrl(flask_restful.Resource):
         project = Project()
         project.project_name = project_name
         db.session.add(project)
-        db.session.commit()
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
+
         return project.to_dict()
 
 
@@ -138,7 +143,11 @@ class SpiderDetailCtrl(flask_restful.Resource):
         job_instance.priority = request.form.get('priority', 0)
         job_instance.enabled = -1
         db.session.add(job_instance)
-        db.session.commit()
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
         agent.start_spider(job_instance)
         return True
 
@@ -257,7 +266,11 @@ class JobCtrl(flask_restful.Resource):
                 job_instance.cron_day_of_week = post_data.get('cron_day_of_week') or '*'
                 job_instance.cron_month = post_data.get('cron_month') or '*'
             db.session.add(job_instance)
-            db.session.commit()
+            try:
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                raise e
             return True
 
 
@@ -373,7 +386,11 @@ class JobDetailCtrl(flask_restful.Resource):
             job_instance.cron_month = post_data.get('cron_month') or job_instance.cron_month
             job_instance.desc = post_data.get('desc', 0) or job_instance.desc
             job_instance.tags = post_data.get('tags', 0) or job_instance.tags
-            db.session.commit()
+            try:
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                raise e
             if post_data.get('status') == 'run':
                 agent.start_spider(job_instance)
             return True
@@ -513,7 +530,11 @@ def project_create():
     project = Project()
     project.project_name = project_name
     db.session.add(project)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        raise e
     return redirect("/project/%s/spider/deploy" % project.id, code=302)
 
 
@@ -522,7 +543,11 @@ def project_delete(project_id):
     project = Project.find_project_by_id(project_id)
     agent.delete_project(project)
     db.session.delete(project)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        raise e
     return redirect("/project/manage", code=302)
 
 
@@ -600,7 +625,11 @@ def job_add(project_id):
     if job_instance.run_type == JobRunType.ONETIME:
         job_instance.enabled = -1
         db.session.add(job_instance)
-        db.session.commit()
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
         agent.start_spider(job_instance)
     if job_instance.run_type == JobRunType.PERIODIC:
         job_instance.cron_minutes = request.form.get('cron_minutes') or '0'
@@ -613,7 +642,11 @@ def job_add(project_id):
             job_instance.cron_minutes, job_instance.cron_hour, job_instance.cron_day_of_month, job_instance.cron_month, job_instance.cron_day_of_week = \
                 request.form['cron_exp'].split(' ')
         db.session.add(job_instance)
-        db.session.commit()
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
     return redirect(request.referrer, code=302)
 
 
@@ -639,7 +672,11 @@ def job_addlist(project_id):
         if job_instance.run_type == JobRunType.ONETIME:
             job_instance.enabled = -1
             db.session.add(job_instance)
-            db.session.commit()
+            try:
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                raise e
             agent.start_spider(job_instance)
         if job_instance.run_type == JobRunType.PERIODIC:
             job_instance.cron_minutes = request.form.get('cron_minutes') or '0'
@@ -652,7 +689,11 @@ def job_addlist(project_id):
                 job_instance.cron_minutes, job_instance.cron_hour, job_instance.cron_day_of_month, job_instance.cron_month, job_instance.cron_day_of_week = \
                     request.form['cron_exp'].split(' ')
             db.session.add(job_instance)
-            db.session.commit()
+            try:
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                raise e
     return redirect(request.referrer, code=302)
 
 
@@ -685,7 +726,11 @@ def job_back_in_time(project_id):
 
         job_instance.enabled = -1
         db.session.add(job_instance)
-        db.session.commit()
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
         agent.run_back_in_time(job_instance)
     return redirect(request.referrer, code=302)
 
@@ -714,7 +759,11 @@ def job_log(project_id, job_exec_id):
 def job_exec_remove(project_id, job_exec_id):
     job_execution = JobExecution.query.filter_by(project_id=project_id, id=job_exec_id).first()
     db.session.delete(job_execution)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        raise e
     return redirect(request.referrer, code=302)
 
 
@@ -729,7 +778,11 @@ def job_run(project_id, job_instance_id):
 def job_remove(project_id, job_instance_id):
     job_instance = JobInstance.query.filter_by(project_id=project_id, id=job_instance_id).first()
     db.session.delete(job_instance)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        raise e
     return redirect(request.referrer, code=302)
 
 
@@ -737,7 +790,11 @@ def job_remove(project_id, job_instance_id):
 def job_switch(project_id, job_instance_id):
     job_instance = JobInstance.query.filter_by(project_id=project_id, id=job_instance_id).first()
     job_instance.enabled = -1 if job_instance.enabled == 0 else 0
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        raise e
     return redirect(request.referrer, code=302)
 
 
@@ -745,7 +802,11 @@ def job_switch(project_id, job_instance_id):
 def job_switch_overlapping(project_id, job_instance_id):
     job_instance = JobInstance.query.filter_by(project_id=project_id, id=job_instance_id).first()
     job_instance.overlapping = True if not job_instance.overlapping else False
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        raise e
     return redirect(request.referrer, code=302)
 
 
@@ -787,7 +848,11 @@ def project_spider_auto_schedule(project_id, spider_id):
     spider_instance = SpiderInstance.query.filter_by(project_id=project_id, id=spider_id).first()
     spider_setup = SpiderSetup.get_spider_setup(spider_instance)
     spider_setup.auto_schedule = False if spider_setup.auto_schedule else True
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        raise e
 
     return redirect(request.referrer, code=302)
 

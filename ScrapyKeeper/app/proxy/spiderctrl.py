@@ -140,7 +140,11 @@ class SpiderAgent:
                 job_execution.end_time = datetime.datetime.now()
 
         # commit
-        db.session.commit()
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            raise e
 
     def _spider_already_running(self, spider_name, project_id):
         running_jobs = JobExecution.get_running_jobs_by_spider_name(spider_name, project_id)
@@ -186,7 +190,11 @@ class SpiderAgent:
             job_execution.create_time = datetime.datetime.now()
             job_execution.running_on = leader.server
             db.session.add(job_execution)
-            db.session.commit()
+            try:
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                raise e
 
     def start_spider(self, job_instance):
         # prevent jobs overlapping for the same spider
@@ -247,7 +255,11 @@ class SpiderAgent:
             job_execution.create_time = datetime.datetime.now()
             job_execution.running_on = leader.server
             db.session.add(job_execution)
-            db.session.commit()
+            try:
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                raise e
 
     def cancel_spider(self, job_execution):
         job_instance = JobInstance.find_job_instance_by_id(job_execution.job_instance_id)
@@ -257,7 +269,11 @@ class SpiderAgent:
                 if spider_service_instance.cancel_spider(project.project_name, job_execution.service_job_execution_id):
                     job_execution.end_time = datetime.datetime.now()
                     job_execution.running_status = SpiderStatus.CANCELED
-                    db.session.commit()
+                    try:
+                        db.session.commit()
+                    except Exception as e:
+                        db.session.rollback()
+                        raise e
                 break
 
     def deploy(self, project, file_path):
