@@ -94,7 +94,7 @@ class SpiderInstance(Base):
             FROM sk_job_instance AS a
             LEFT JOIN sk_job_execution AS b ON a.id = b.job_instance_id
             GROUP BY a.spider_name
-            ORDER BY date_created DESC
+            ORDER BY a.spider_name
             '''
         sql_avg_runtime = '''
             select a.spider_name, avg(TIMESTAMPDIFF(SECOND, start_time, end_time)) avg_run_time from sk_job_instance as a
