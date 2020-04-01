@@ -249,8 +249,10 @@ class JobExecution(Base):
     def process_raw_stats(self):
         if self.raw_stats is None:
             return
+
         datetime_regex = r'(datetime\.datetime\([^)]+\))'
         self.raw_stats = re.sub(datetime_regex, r"'\1'", self.raw_stats)
+        self.raw_stats = re.sub(r'\bNone\b', "'0'", self.raw_stats)
         stats = demjson.decode(self.raw_stats)
         self.requests_count = stats.get('downloader/request_count') or 0
         self.items_count = stats.get('item_scraped_count') or 0
