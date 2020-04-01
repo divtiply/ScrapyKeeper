@@ -36,6 +36,6 @@ COPY . /crawlie-keeper
 WORKDIR /crawlie-keeper
 RUN pip install -r requirements.txt
 
-EXPOSE 6666
+EXPOSE 5050
 
 CMD ["python3", "entrypoint.py", "--no-auth"]
