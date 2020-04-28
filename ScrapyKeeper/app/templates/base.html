@@ -105,6 +105,9 @@
                 <li><a href="/project/{{ project.id }}/spider/dashboard"><i class="fa fa-flask text-red"></i>
                     <span>Dashboard</span></a>
                 </li>
+                <li><a id="favorite" href="/project/{{ project.id }}/job/favorites"><i class="fa fa-star text-yellow"></i>
+                    <span>My Spiders</span></a>
+                </li>
                 <li><a href="/project/{{ project.id }}/spider/deploy"><i class="fa fa-server text-orange"></i>
                     <span>Deploy</span></a></li>
                 <!--<li><a href="#"><i class="fa fa-circle-o text-red"></i> <span>Settings</span></a></li>-->
@@ -209,6 +212,15 @@
 <script src="/static/js/demo.js"></script>
 <!-- Multiple Select -->
 <script src="/static/js/multiple-select.min.js"></script>
+
+<script>
+    // intialize the local storage
+    if (window.localStorage.length == 0) {
+         window.localStorage.setItem('favorite', JSON.stringify({"favoriteList": []}));
+    }
+</script>
+
 {% block script %}{% endblock %}
+
 </body>
 </html>

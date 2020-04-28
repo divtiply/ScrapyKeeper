@@ -356,6 +356,18 @@ class JobExecution(Base):
         return result
 
     @classmethod
+    def favorite_spiders_jobs(cls, project_id, favorite_spiders, each_status_limit=200):
+        job_executions_list = JobExecution.query.filter(JobExecution.project_id == project_id)\
+            .join(JobInstance, JobExecution.job_instance_id == JobInstance.id)\
+            .filter((JobExecution.running_status == SpiderStatus.FINISHED) |
+                    (JobExecution.running_status == SpiderStatus.CANCELED) |
+                    (JobExecution.running_status == SpiderStatus.CRASHED))\
+            .filter(JobInstance.spider_name.in_(favorite_spiders))\
+            .order_by(desc(JobExecution.job_instance_id))\
+            .limit(each_status_limit)
+        return [job_execution.to_dict() for job_execution in job_executions_list]
+
+    @classmethod
     def list_running_jobs(cls, project_id):
         return [job_execution.to_dict() for job_execution in
                 JobExecution.query.filter_by(project_id=project_id,

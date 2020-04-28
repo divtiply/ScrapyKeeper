@@ -578,7 +578,6 @@ def job_dashboard(project_id):
 
         last_items_count = old_items_count.pop(0)
         (min_items_count, average_items_count, max_items_count) = _compute_item_stats(old_items_count, last_items_count)
-        max_warning_interval = max_items_count * 1.5
 
         if 0 <= last_items_count <= min_items_count:
             colour = 'danger'
@@ -594,6 +593,51 @@ def job_dashboard(project_id):
 
     return render_template("job_dashboard.html", job_status=jobs, spider_colours=spider_colours,
                            bit_enabled=config.BACK_IN_TIME_ENABLED)
+
+
+@app.route("/project/<project_id>/job/favorites", methods=['GET', 'POST'])
+def job_favorites(project_id):
+    unique_spiders = set()
+    unique_favorite_jobs = list()
+    spider_colours = {}
+
+    if request.method == 'POST':
+        favorite_spiders = list(filter(None, request.form['favorite'].split(',')))
+        jobs = JobExecution.favorite_spiders_jobs(project_id, favorite_spiders) if favorite_spiders else []
+
+        #  keep only one instance for every spider
+        for job in jobs:
+            instance = job['job_instance']
+            if instance.get('spider_name') not in unique_spiders:
+                unique_favorite_jobs.append(job)
+            unique_spiders.add(instance.get('spider_name'))
+
+        for spider_name in unique_spiders:
+            spider_id, old_items_count = JobExecution.get_last_execution_by_spider(spider_name, project_id)
+            if not old_items_count:
+                spider_colours[spider_name] = {
+                    'colour': None,
+                    'spider_id': spider_id
+                }
+                continue
+
+            last_items_count = old_items_count.pop(0)
+            (min_items_count, average_items_count, max_items_count) = _compute_item_stats(old_items_count, last_items_count)
+
+            if 0 <= last_items_count <= min_items_count:
+                colour = 'danger'
+            elif min_items_count < last_items_count <= max_items_count:
+                colour = 'success'
+            else:
+                colour = 'warning'
+
+            spider_colours[spider_name] = {
+                'colour': colour,
+                'spider_id': spider_id
+            }
+
+    return render_template("job_favorites.html", job_status=unique_favorite_jobs, spider_colours=spider_colours,
+                           method=request.method)
 
 
 @app.route("/project/<project_id>/job/periodic")
