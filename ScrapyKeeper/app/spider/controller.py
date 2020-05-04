@@ -603,7 +603,7 @@ def job_favorites(project_id):
 
     if request.method == 'POST':
         favorite_spiders = list(filter(None, request.form['favorite'].split(',')))
-        jobs = JobExecution.favorite_spiders_jobs(project_id, favorite_spiders) if favorite_spiders else []
+        jobs = JobExecution.favorite_spiders_jobs(project_id, favorite_spiders, 5000) if favorite_spiders else []
 
         #  keep only one instance for every spider
         for job in jobs:
