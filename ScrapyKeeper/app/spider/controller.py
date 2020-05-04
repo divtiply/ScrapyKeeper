@@ -705,7 +705,7 @@ def job_addlist(project_id):
         job_instance.spider_arguments = request.form['spider_arguments']
         job_instance.priority = request.form.get('priority', 0)
         job_instance.run_type = request.form['run_type']
-        job_instance.overlapping = request.form.get('overlapping', False)
+        job_instance.overlapping = bool(request.form.get('overlapping', False))
         # chose daemon manually
         if request.form['daemon'] != 'auto':
             spider_args = []
