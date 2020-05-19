@@ -227,8 +227,8 @@ def _get_throttle_value(spider_name, project_id):
 
     time_spent_ratio = float(1440 / average_mins)  # the ratio reported to 1 day
     # now we'll have to only keep the number with a min of .5 and a max of 10
-    time_spent_ratio = max(time_spent_ratio, 0.5)
-    time_spent_ratio = min(time_spent_ratio, 20)
+    time_spent_ratio = max(time_spent_ratio, config.MIN_LOAD_RATIO_MULTIPLIER)
+    time_spent_ratio = min(time_spent_ratio, config.MAX_LOAD_RATIO_MULTIPLIER)
     autothrottle_to_set = round(config.DEFAULT_AUTOTHROTTLE_MAX_CONCURRENCY / time_spent_ratio, 1)
 
     return autothrottle_to_set
