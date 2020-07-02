@@ -5,7 +5,7 @@ import re
 
 from ScrapyKeeper import config
 from ScrapyKeeper.app import db, app
-from ScrapyKeeper.app.spider.model import SpiderStatus, JobExecution, JobInstance, Project, JobPriority
+from ScrapyKeeper.app.spider.model import SpiderStatus, JobExecution, JobInstance, Project, JobPriority, SpiderInfo
 from ScrapyKeeper.app.util.config import get_cluster_instances_ids, get_instances_private_ips
 from ScrapyKeeper.app.util.cluster import get_instance_memory_usage
 
@@ -104,34 +104,14 @@ class SpiderAgent:
         for spider_service_instance in self.spider_service_instances:
             job_status = spider_service_instance.get_job_list(project.project_name)
             # pending
-            for job_execution_info in job_status[SpiderStatus.PENDING]:
-                found_jobs.append(job_execution_info['id'])
 
-            # running
-            for job_execution_info in job_status[SpiderStatus.RUNNING]:
-                found_jobs.append(job_execution_info['id'])
+            pending_found_jobs = self._process_pending_jobs(job_status)
+            running_found_jobs = self._process_running_jobs(job_status, job_execution_dict)
+            finished_found_jobs = self.process_finished_jobs(job_status, job_execution_dict)
 
-                job_execution = job_execution_dict.get(job_execution_info['id'])
-                if job_execution and job_execution.running_status == SpiderStatus.PENDING:
-                    job_execution.start_time = job_execution_info['start_time']
-                    job_execution.running_status = SpiderStatus.RUNNING
-
-            # finished
-            for job_execution_info in job_status[SpiderStatus.FINISHED]:
-                found_jobs.append(job_execution_info['id'])
-
-                job_execution = job_execution_dict.get(job_execution_info['id'])
-                if job_execution and job_execution.running_status != SpiderStatus.FINISHED:
-                    job_execution.start_time = job_execution_info['start_time']
-                    job_execution.end_time = job_execution_info['end_time']
-                    job_execution.running_status = SpiderStatus.FINISHED
-
-                    res = requests.get(self.log_url(job_execution), headers={"Range": "bytes=-4096"})
-                    res.encoding = 'utf8'
-                    match = re.findall(job_execution.RAW_STATS_REGEX, res.text, re.DOTALL)
-                    if match:
-                        job_execution.raw_stats = match[0]
-                        job_execution.process_raw_stats()
+            found_jobs += pending_found_jobs
+            found_jobs += running_found_jobs
+            found_jobs += finished_found_jobs
 
         # mark jobs as CRASHED
         for job_execution in job_execution_list:
@@ -145,6 +125,71 @@ class SpiderAgent:
         except Exception as e:
             db.session.rollback()
             raise e
+
+    @staticmethod
+    def _process_pending_jobs(job_statuses):
+        """
+        Process the pending jobs
+        :param job_statuses:
+        :return:
+        """
+        found_jobs = []
+
+        for job_execution_info in job_statuses[SpiderStatus.PENDING]:
+            found_jobs.append(job_execution_info['id'])
+
+        return found_jobs
+
+    @staticmethod
+    def _process_running_jobs(job_statuses, job_execution_dict):
+        found_jobs = []
+
+        for job_execution_info in job_statuses[SpiderStatus.RUNNING]:
+            found_jobs.append(job_execution_info['id'])
+
+            job_execution = job_execution_dict.get(job_execution_info['id'])
+            if job_execution and job_execution.running_status == SpiderStatus.PENDING:
+                job_execution.start_time = job_execution_info['start_time']
+                job_execution.running_status = SpiderStatus.RUNNING
+
+        return found_jobs
+
+    def process_finished_jobs(self, job_status, job_execution_dict):
+        found_jobs = []
+
+        for job_execution_info in job_status[SpiderStatus.FINISHED]:
+            found_jobs.append(job_execution_info['id'])
+
+            job_execution = job_execution_dict.get(job_execution_info['id'])
+            if not job_execution or job_execution.running_status == SpiderStatus.FINISHED:
+                # the minimum check
+                continue
+
+            job_execution.start_time = job_execution_info['start_time']
+            job_execution.end_time = job_execution_info['end_time']
+            job_execution.running_status = SpiderStatus.FINISHED
+
+            res = requests.get(self.log_url(job_execution), headers={"Range": "bytes=-4096"})
+            res.encoding = 'utf8'
+            match = re.findall(job_execution.RAW_STATS_REGEX, res.text, re.DOTALL)
+            if not match:
+                continue
+
+            execution_results = match[0]
+            job_execution.raw_stats = execution_results
+            job_execution.process_raw_stats()
+
+            job_instance = JobInstance.find_job_instance_by_id(job_execution.job_instance_id)
+            spider_info = SpiderInfo.get_spider_info(job_instance.spider_name, job_instance.project_id)
+            if not spider_info:
+                spider_info = SpiderInfo()
+                spider_info.spider_name = job_instance.spider_name
+                spider_info.project_id = job_instance.project_id
+                db.session.add(spider_info)
+
+            spider_info.update_spider_info(job_execution.raw_stats)
+
+        return found_jobs
 
     def _spider_already_running(self, spider_name, project_id):
         running_jobs = JobExecution.get_running_jobs_by_spider_name(spider_name, project_id)

@@ -1,6 +1,7 @@
 import datetime
 import os
 import tempfile
+from collections import OrderedDict
 
 import flask_restful
 import requests
@@ -16,7 +17,7 @@ from werkzeug.utils import secure_filename
 from ScrapyKeeper import config
 from ScrapyKeeper.app import db, api, agent, app, SpiderSetup
 from ScrapyKeeper.app.spider import helper
-from ScrapyKeeper.app.spider.model import JobInstance, Project, JobExecution, SpiderInstance, JobRunType
+from ScrapyKeeper.app.spider.model import JobInstance, Project, JobExecution, SpiderInstance, JobRunType, SpiderInfo
 
 api_spider_bp = Blueprint('spider', __name__)
 
@@ -863,8 +864,23 @@ def spider_dashboard(project_id):
 
 @app.route("/project/<project_id>/spider/deploy")
 def spider_deploy(project_id):
-    project = Project.find_project_by_id(project_id)
     return render_template("spider_deploy.html")
+
+@app.route("/project/<project_id>/reports/site-types")
+def reports_site_types(project_id):
+    country_types_list = {}
+    site_types = {}
+    spiders_info_list = SpiderInfo.get_spiders_list(project_id)
+    for spider_info in spiders_info_list:
+        site_type = spider_info.site_type.lower()
+        site_types[site_type] = True
+        country_codes = spider_info.country_codes.split(' ')
+        for country_code in country_codes:
+            country_types_list[country_code] = country_types_list.get(country_code, {})
+            country_types_list[country_code][site_type] = country_types_list.get(country_code).get(site_type, 0) + 1
+
+    country_types_list = OrderedDict(sorted(country_types_list.items(), key=lambda kv: sum(kv[1].values()), reverse=True))
+    return render_template("reports_site_types.html", per_country_report=country_types_list, site_types=site_types)
 
 
 @app.route("/project/<project_id>/spider/upload", methods=['post'])

@@ -2,9 +2,8 @@ import datetime
 import demjson
 import numpy as np
 import re
-from sqlalchemy import desc
+from sqlalchemy import desc, func
 from sqlalchemy.sql import text
-
 from ScrapyKeeper import config
 from ScrapyKeeper.app import db, Base
 from ScrapyKeeper.app.spider import helper
@@ -117,6 +116,47 @@ class SpiderInstance(Base):
                                'spider_setup': spider_setup.to_dict()
                                }))
         return res
+
+
+class SpiderInfo(Base):
+    __tablename__ = 'sk_spider_info'
+
+    spider_name = db.Column(db.String(100))
+    project_id = db.Column(db.INTEGER, nullable=False, index=True)
+    country_codes = db.Column(db.String(100))
+    site_type = db.Column(db.String(100))
+
+    def update_spider_info(self, execution_results):
+        if execution_results is None:
+            return
+
+        stats = demjson.decode(execution_results)
+
+        self.site_type = stats.get('site_type') or ''
+        self.country_codes = stats.get('site_type_countries') or ''
+
+    @classmethod
+    def get_spider_info(cls, spider_name, project_id):
+        spider_info = cls.query.filter_by(project_id=project_id, spider_name=spider_name)\
+            .first()
+
+        return spider_info
+
+    @classmethod
+    def get_spiders_list(cls, project_id):
+        spider_info = cls.query.filter_by(project_id=project_id) \
+            .filter(func.coalesce(SpiderInfo.site_type, '') != '') \
+            .filter(func.coalesce(SpiderInfo.country_codes, '') != '') \
+            .all()
+
+        return spider_info
+
+    def to_dict(self):
+        return dict(id=self.id,
+                    spider_name=self.spider_name,
+                    project_id=self.project_id,
+                    site_type=self.site_type,
+                    country_codes=self.country_codes)
 
 
 class SpiderSetup(Base):
@@ -250,6 +290,12 @@ class JobExecution(Base):
         if self.raw_stats is None:
             return
 
+        multiline_output_list = re.findall(r": ('[\w\s]+'\r?\n[\w\s']+),", self.raw_stats)
+        for multiline_output in multiline_output_list:
+            cleared_line = multiline_output.replace("'", '')
+            new_line = ' '.join(cleared_line.split())
+            self.raw_stats = self.raw_stats.replace(multiline_output, "'{}'".format(new_line))
+
         datetime_regex = r'(datetime\.datetime\([^)]+\))'
         self.raw_stats = re.sub(datetime_regex, r"'\1'", self.raw_stats)
         self.raw_stats = re.sub(r'\bNone\b', "'0'", self.raw_stats)
@@ -365,6 +411,16 @@ class JobExecution(Base):
             .filter(JobInstance.spider_name.in_(favorite_spiders))\
             .order_by(desc(JobExecution.job_instance_id))\
             .limit(each_status_limit)
+        return [job_execution.to_dict() for job_execution in job_executions_list]
+
+    @classmethod
+    def site_type_tagging(cls, project_id, each_status_limit=1000):
+        job_executions_list = JobExecution.query.filter(JobExecution.project_id == project_id) \
+            .join(JobInstance, JobExecution.job_instance_id == JobInstance.id) \
+            .filter((JobExecution.running_status == SpiderStatus.FINISHED) |
+                    (JobExecution.running_status == SpiderStatus.CANCELED)) \
+            .limit(each_status_limit)
+
         return [job_execution.to_dict() for job_execution in job_executions_list]
 
     @classmethod
