@@ -876,6 +876,7 @@ def reports_site_types(project_id):
         site_types[site_type] = True
         country_codes = spider_info.country_codes.split(' ')
         for country_code in country_codes:
+            country_code = country_code.upper()
             country_types_list[country_code] = country_types_list.get(country_code, {})
             country_types_list[country_code][site_type] = country_types_list.get(country_code).get(site_type, 0) + 1
 

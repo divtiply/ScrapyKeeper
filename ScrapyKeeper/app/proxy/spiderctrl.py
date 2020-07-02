@@ -181,12 +181,6 @@ class SpiderAgent:
 
             job_instance = JobInstance.find_job_instance_by_id(job_execution.job_instance_id)
             spider_info = SpiderInfo.get_spider_info(job_instance.spider_name, job_instance.project_id)
-            if not spider_info:
-                spider_info = SpiderInfo()
-                spider_info.spider_name = job_instance.spider_name
-                spider_info.project_id = job_instance.project_id
-                db.session.add(spider_info)
-
             spider_info.update_spider_info(job_execution.raw_stats)
 
         return found_jobs

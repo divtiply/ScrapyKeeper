@@ -140,6 +140,18 @@ class SpiderInfo(Base):
         spider_info = cls.query.filter_by(project_id=project_id, spider_name=spider_name)\
             .first()
 
+        if not spider_info:
+            spider_info = cls()
+            spider_info.spider_name = spider_name
+            spider_info.project_id = project_id
+            db.session().add(spider_info)
+
+            try:
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                raise e
+
         return spider_info
 
     @classmethod
