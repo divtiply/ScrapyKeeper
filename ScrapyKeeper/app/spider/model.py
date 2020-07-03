@@ -159,6 +159,7 @@ class SpiderInfo(Base):
         spider_info = cls.query.filter_by(project_id=project_id) \
             .filter(func.coalesce(SpiderInfo.site_type, '') != '') \
             .filter(func.coalesce(SpiderInfo.country_codes, '') != '') \
+            .group_by(cls.spider_name, cls.project_id) \
             .all()
 
         return spider_info
