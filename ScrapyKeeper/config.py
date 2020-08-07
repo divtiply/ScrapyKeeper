@@ -1,14 +1,34 @@
 # Statement for enabling the development environment
+import logging
 import os
+import boto3
+from botocore.exceptions import ClientError
 
 DEBUG = True
+
+
+def get_param_from_client(client, parameter_name):
+    try:
+        value = client.get_parameter(Name=parameter_name, WithDecryption=True)['Parameter']['Value']
+    except ClientError:
+        logging.error(' ClientError: There is no parameter named: {}'.format(parameter_name))
+        return
+
+    if value == 'None':
+        return None
+    elif value == '\'\'':
+        return ''
+
+    return value
+
 
 # Define the application directory
 
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+ssm_client = boto3.client('ssm', region_name='eu-west-1')
 
-SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_CONNECTION_STRING', None)
+SQLALCHEMY_DATABASE_URI = get_param_from_client(ssm_client, '/data/crawlie-keeper/DATABASE_CONNEaCTION_STRING') or None
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 DATABASE_CONNECT_OPTIONS = {}
 
@@ -37,7 +57,7 @@ DEFAULT_CLUSTER_NAME = 'crawler'
 # spider services
 SERVER_TYPE = 'scrapyd'
 
-servers_string = os.getenv('SERVERS', '')
+servers_string = get_param_from_client(ssm_client, '/data/crawlie-keeper/SERVERS') or ''
 SERVERS = [s.strip() for s in servers_string.split(',') if s]
 
 # basic auth
@@ -47,24 +67,24 @@ BASIC_AUTH_PASSWORD = 'admin'
 BASIC_AUTH_FORCE = True
 
 NO_SENTRY = False
-SENTRY_URI = os.getenv('SENTRY_URI', None)
+SENTRY_URI = get_param_from_client(ssm_client, '/data/crawlie-keeper/SENTRY_URI') or None
 
 # http settings
 
 DEFAULT_TIMEOUT = 30  # seconds
 
-SPIDERS_SYNC_INTERVAL_IN_SECONDS = int(os.getenv('SPIDERS_SYNC_INTERVAL_IN_SECONDS', 120))
+SPIDERS_SYNC_INTERVAL_IN_SECONDS = int(get_param_from_client(ssm_client, '/data/crawlie-keeper/SPIDERS_SYNC_INTERVAL_IN_SECONDS') or 120)
 
-BACK_IN_TIME_ENABLED = bool(int(os.getenv('BACK_IN_TIME_ENABLED', 1)))
+BACK_IN_TIME_ENABLED = bool(int(get_param_from_client(ssm_client, '/data/crawlie-keeper/BACK_IN_TIME_ENABLED') or 1))
 
-AUTO_SCHEDULE_ENABLED = bool(int(os.getenv('AUTO_SCHEDULE_ENABLED', 1)))
-AUTO_SCHEDULE_DEFAULT_VALUE = bool(int(os.getenv('AUTO_SCHEDULE_DEFAULT_VALUE', 1)))
+AUTO_SCHEDULE_ENABLED = bool(int(get_param_from_client(ssm_client, '/data/crawlie-keeper/AUTO_SCHEDULE_ENABLED') or 1))
+AUTO_SCHEDULE_DEFAULT_VALUE = bool(int(get_param_from_client(ssm_client, '/data/crawlie-keeper/AUTO_SCHEDULE_DEFAULT_VALUE') or 1))
 
-MIN_LOAD_RATIO_MULTIPLIER = float(os.getenv('MIN_LOAD_RATIO_MULTIPLIER', 0.5))
-MAX_LOAD_RATIO_MULTIPLIER = float(os.getenv('MAX_LOAD_RATIO_MULTIPLIER', 6))
-MAX_SPIDERS_START_AT_ONCE = int(os.getenv('MAX_SPIDERS_START_AT_ONCE', 10))
-MAX_LOAD_ALLOWED = int(os.getenv('MAX_LOAD_ALLOWED', 250))
-DEFAULT_AUTOTHROTTLE_MAX_CONCURRENCY = int(os.getenv('AUTOTHROTTLE_MAX_CONCURRENCY', 10))
+MIN_LOAD_RATIO_MULTIPLIER = float(get_param_from_client(ssm_client, '/data/crawlie-keeper/MIN_LOAD_RATIO_MULTIPLIER') or 0.5)
+MAX_LOAD_RATIO_MULTIPLIER = float(get_param_from_client(ssm_client, '/data/crawlie-keeper/MAX_LOAD_RATIO_MULTIPLIER') or 6)
+MAX_SPIDERS_START_AT_ONCE = int(get_param_from_client(ssm_client, '/data/crawlie-keeper/MAX_SPIDERS_START_AT_ONCE') or 10)
+MAX_LOAD_ALLOWED = int(get_param_from_client(ssm_client, '/data/crawlie-keeper/MAX_LOAD_ALLOWED') or 250)
+DEFAULT_AUTOTHROTTLE_MAX_CONCURRENCY = int(get_param_from_client(ssm_client, '/data/crawlie-keeper/AUTOTHROTTLE_MAX_CONCURRENCY') or 10)
 
-USED_MEMORY_PERCENT_THRESHOLD = int(os.getenv('USED_MEMORY_PERCENT_THRESHOLD', 90))  # the threshold for launching new spiders
-RUNS_IN_CLOUD = bool(int(os.getenv('RUNS_IN_CLOUD', 1)))
+USED_MEMORY_PERCENT_THRESHOLD = int(get_param_from_client(ssm_client, '/data/crawlie-keeper/USED_MEMORY_PERCENT_THRESHOLD') or 90)  # the threshold for launching new spiders
+RUNS_IN_CLOUD = bool(int(get_param_from_client(ssm_client, '/data/crawlie-keeper/RUNS_IN_CLOUD') or 1))
