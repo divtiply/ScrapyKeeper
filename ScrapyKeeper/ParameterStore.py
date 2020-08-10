@@ -1,0 +1,23 @@
+import boto3
+from botocore.exceptions import ClientError
+import datetime
+import logging
+
+
+class ParameterStore:
+    def __init__(self, default_region='eu-west-1'):
+        self._client = boto3.client('ssm', region_name=default_region)
+
+    def get_param(self, parameter_name, default=None):
+        try:
+            value = self._client.get_parameter(Name=parameter_name, WithDecryption=True)['Parameter']['Value']
+
+            if value == 'None':
+                return None
+            elif value == '\'\'':
+                return ''
+
+            return value
+
+        except ClientError:
+            return default

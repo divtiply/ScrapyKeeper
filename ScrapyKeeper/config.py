@@ -1,34 +1,16 @@
 # Statement for enabling the development environment
-import logging
 import os
-import boto3
-from botocore.exceptions import ClientError
+from ScrapyKeeper.ParameterStore import ParameterStore
 
 DEBUG = True
-
-
-def get_param_from_client(client, parameter_name):
-    try:
-        value = client.get_parameter(Name=parameter_name, WithDecryption=True)['Parameter']['Value']
-    except ClientError:
-        logging.error(' ClientError: There is no parameter named: {}'.format(parameter_name))
-        return
-
-    if value == 'None':
-        return None
-    elif value == '\'\'':
-        return ''
-
-    return value
-
 
 # Define the application directory
 
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-ssm_client = boto3.client('ssm', region_name='eu-west-1')
+ssm_client = ParameterStore()
 
-SQLALCHEMY_DATABASE_URI = get_param_from_client(ssm_client, '/data/crawlie-keeper/DATABASE_CONNEaCTION_STRING') or None
+SQLALCHEMY_DATABASE_URI = ssm_client.get_param('/data/crawlie-keeper/DATABASE_CONNECTION_STRING')
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 DATABASE_CONNECT_OPTIONS = {}
 
@@ -57,7 +39,7 @@ DEFAULT_CLUSTER_NAME = 'crawler'
 # spider services
 SERVER_TYPE = 'scrapyd'
 
-servers_string = get_param_from_client(ssm_client, '/data/crawlie-keeper/SERVERS') or ''
+servers_string = ssm_client.get_param('/data/crawlie-keeper/SERVERS', '')
 SERVERS = [s.strip() for s in servers_string.split(',') if s]
 
 # basic auth
@@ -67,24 +49,24 @@ BASIC_AUTH_PASSWORD = 'admin'
 BASIC_AUTH_FORCE = True
 
 NO_SENTRY = False
-SENTRY_URI = get_param_from_client(ssm_client, '/data/crawlie-keeper/SENTRY_URI') or None
+SENTRY_URI = ssm_client.get_param('/data/crawlie-keeper/SENTRY_URI')
 
 # http settings
 
 DEFAULT_TIMEOUT = 30  # seconds
 
-SPIDERS_SYNC_INTERVAL_IN_SECONDS = int(get_param_from_client(ssm_client, '/data/crawlie-keeper/SPIDERS_SYNC_INTERVAL_IN_SECONDS') or 120)
+SPIDERS_SYNC_INTERVAL_IN_SECONDS = int(ssm_client.get_param('/data/crawlie-keeper/SPIDERS_SYNC_INTERVAL_IN_SECONDS', 120))
 
-BACK_IN_TIME_ENABLED = bool(int(get_param_from_client(ssm_client, '/data/crawlie-keeper/BACK_IN_TIME_ENABLED') or 1))
+BACK_IN_TIME_ENABLED = bool(int(ssm_client.get_param('/data/crawlie-keeper/BACK_IN_TIME_ENABLED', 1)))
 
-AUTO_SCHEDULE_ENABLED = bool(int(get_param_from_client(ssm_client, '/data/crawlie-keeper/AUTO_SCHEDULE_ENABLED') or 1))
-AUTO_SCHEDULE_DEFAULT_VALUE = bool(int(get_param_from_client(ssm_client, '/data/crawlie-keeper/AUTO_SCHEDULE_DEFAULT_VALUE') or 1))
+AUTO_SCHEDULE_ENABLED = bool(int(ssm_client.get_param('/data/crawlie-keeper/AUTO_SCHEDULE_ENABLED', 1)))
+AUTO_SCHEDULE_DEFAULT_VALUE = bool(int(ssm_client.get_param('/data/crawlie-keeper/AUTO_SCHEDULE_DEFAULT_VALUE', 1)))
 
-MIN_LOAD_RATIO_MULTIPLIER = float(get_param_from_client(ssm_client, '/data/crawlie-keeper/MIN_LOAD_RATIO_MULTIPLIER') or 0.5)
-MAX_LOAD_RATIO_MULTIPLIER = float(get_param_from_client(ssm_client, '/data/crawlie-keeper/MAX_LOAD_RATIO_MULTIPLIER') or 6)
-MAX_SPIDERS_START_AT_ONCE = int(get_param_from_client(ssm_client, '/data/crawlie-keeper/MAX_SPIDERS_START_AT_ONCE') or 10)
-MAX_LOAD_ALLOWED = int(get_param_from_client(ssm_client, '/data/crawlie-keeper/MAX_LOAD_ALLOWED') or 250)
-DEFAULT_AUTOTHROTTLE_MAX_CONCURRENCY = int(get_param_from_client(ssm_client, '/data/crawlie-keeper/AUTOTHROTTLE_MAX_CONCURRENCY') or 10)
+MIN_LOAD_RATIO_MULTIPLIER = float(ssm_client.get_param('/data/crawlie-keeper/MIN_LOAD_RATIO_MULTIPLIER', 0.5))
+MAX_LOAD_RATIO_MULTIPLIER = float(ssm_client.get_param('/data/crawlie-keeper/MAX_LOAD_RATIO_MULTIPLIER', 6))
+MAX_SPIDERS_START_AT_ONCE = int(ssm_client.get_param('/data/crawlie-keeper/MAX_SPIDERS_START_AT_ONCE', 10))
+MAX_LOAD_ALLOWED = int(ssm_client.get_param('/data/crawlie-keeper/MAX_LOAD_ALLOWED', 250))
+DEFAULT_AUTOTHROTTLE_MAX_CONCURRENCY = int(ssm_client.get_param('/data/crawlie-keeper/AUTOTHROTTLE_MAX_CONCURRENCY', 10))
 
-USED_MEMORY_PERCENT_THRESHOLD = int(get_param_from_client(ssm_client, '/data/crawlie-keeper/USED_MEMORY_PERCENT_THRESHOLD') or 90)  # the threshold for launching new spiders
-RUNS_IN_CLOUD = bool(int(get_param_from_client(ssm_client, '/data/crawlie-keeper/RUNS_IN_CLOUD') or 1))
+USED_MEMORY_PERCENT_THRESHOLD = int(ssm_client.get_param('/data/crawlie-keeper/USED_MEMORY_PERCENT_THRESHOLD', 90))  # the threshold for launching new spiders
+RUNS_IN_CLOUD = bool(int(ssm_client.get_param('/data/crawlie-keeper/RUNS_IN_CLOUD', 1)))
