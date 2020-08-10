@@ -1,6 +1,7 @@
 # Statement for enabling the development environment
 import os
-from ScrapyKeeper.ParameterStore import ParameterStore
+
+from ScrapyKeeper.app.util.parameter_store import ParameterStore
 
 DEBUG = True
 
@@ -8,9 +9,9 @@ DEBUG = True
 
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-ssm_client = ParameterStore()
+param_store = ParameterStore()
 
-SQLALCHEMY_DATABASE_URI = ssm_client.get_param('/data/crawlie-keeper/DATABASE_CONNECTION_STRING')
+SQLALCHEMY_DATABASE_URI = param_store.get_param('/data/crawlie-keeper/DATABASE_CONNECTION_STRING')
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 DATABASE_CONNECT_OPTIONS = {}
 
@@ -39,7 +40,7 @@ DEFAULT_CLUSTER_NAME = 'crawler'
 # spider services
 SERVER_TYPE = 'scrapyd'
 
-servers_string = ssm_client.get_param('/data/crawlie-keeper/SERVERS', '')
+servers_string = param_store.get_param('/data/crawlie-keeper/SERVERS', '')
 SERVERS = [s.strip() for s in servers_string.split(',') if s]
 
 # basic auth
@@ -49,24 +50,24 @@ BASIC_AUTH_PASSWORD = 'admin'
 BASIC_AUTH_FORCE = True
 
 NO_SENTRY = False
-SENTRY_URI = ssm_client.get_param('/data/crawlie-keeper/SENTRY_URI')
+SENTRY_URI = param_store.get_param('/data/crawlie-keeper/SENTRY_URI')
 
 # http settings
 
 DEFAULT_TIMEOUT = 30  # seconds
 
-SPIDERS_SYNC_INTERVAL_IN_SECONDS = int(ssm_client.get_param('/data/crawlie-keeper/SPIDERS_SYNC_INTERVAL_IN_SECONDS', 120))
+SPIDERS_SYNC_INTERVAL_IN_SECONDS = int(param_store.get_param('/data/crawlie-keeper/SPIDERS_SYNC_INTERVAL_IN_SECONDS', 120))
 
-BACK_IN_TIME_ENABLED = bool(int(ssm_client.get_param('/data/crawlie-keeper/BACK_IN_TIME_ENABLED', 1)))
+BACK_IN_TIME_ENABLED = bool(int(param_store.get_param('/data/crawlie-keeper/BACK_IN_TIME_ENABLED', 1)))
 
-AUTO_SCHEDULE_ENABLED = bool(int(ssm_client.get_param('/data/crawlie-keeper/AUTO_SCHEDULE_ENABLED', 1)))
-AUTO_SCHEDULE_DEFAULT_VALUE = bool(int(ssm_client.get_param('/data/crawlie-keeper/AUTO_SCHEDULE_DEFAULT_VALUE', 1)))
+AUTO_SCHEDULE_ENABLED = bool(int(param_store.get_param('/data/crawlie-keeper/AUTO_SCHEDULE_ENABLED', 1)))
+AUTO_SCHEDULE_DEFAULT_VALUE = bool(int(param_store.get_param('/data/crawlie-keeper/AUTO_SCHEDULE_DEFAULT_VALUE', 1)))
 
-MIN_LOAD_RATIO_MULTIPLIER = float(ssm_client.get_param('/data/crawlie-keeper/MIN_LOAD_RATIO_MULTIPLIER', 0.5))
-MAX_LOAD_RATIO_MULTIPLIER = float(ssm_client.get_param('/data/crawlie-keeper/MAX_LOAD_RATIO_MULTIPLIER', 6))
-MAX_SPIDERS_START_AT_ONCE = int(ssm_client.get_param('/data/crawlie-keeper/MAX_SPIDERS_START_AT_ONCE', 10))
-MAX_LOAD_ALLOWED = int(ssm_client.get_param('/data/crawlie-keeper/MAX_LOAD_ALLOWED', 250))
-DEFAULT_AUTOTHROTTLE_MAX_CONCURRENCY = int(ssm_client.get_param('/data/crawlie-keeper/AUTOTHROTTLE_MAX_CONCURRENCY', 10))
+MIN_LOAD_RATIO_MULTIPLIER = float(param_store.get_param('/data/crawlie-keeper/MIN_LOAD_RATIO_MULTIPLIER', 0.5))
+MAX_LOAD_RATIO_MULTIPLIER = float(param_store.get_param('/data/crawlie-keeper/MAX_LOAD_RATIO_MULTIPLIER', 6))
+MAX_SPIDERS_START_AT_ONCE = int(param_store.get_param('/data/crawlie-keeper/MAX_SPIDERS_START_AT_ONCE', 10))
+MAX_LOAD_ALLOWED = int(param_store.get_param('/data/crawlie-keeper/MAX_LOAD_ALLOWED', 250))
+DEFAULT_AUTOTHROTTLE_MAX_CONCURRENCY = int(param_store.get_param('/data/crawlie-keeper/AUTOTHROTTLE_MAX_CONCURRENCY', 10))
 
-USED_MEMORY_PERCENT_THRESHOLD = int(ssm_client.get_param('/data/crawlie-keeper/USED_MEMORY_PERCENT_THRESHOLD', 90))  # the threshold for launching new spiders
-RUNS_IN_CLOUD = bool(int(ssm_client.get_param('/data/crawlie-keeper/RUNS_IN_CLOUD', 1)))
+USED_MEMORY_PERCENT_THRESHOLD = int(param_store.get_param('/data/crawlie-keeper/USED_MEMORY_PERCENT_THRESHOLD', 90))  # the threshold for launching new spiders
+RUNS_IN_CLOUD = bool(int(param_store.get_param('/data/crawlie-keeper/RUNS_IN_CLOUD', 1)))

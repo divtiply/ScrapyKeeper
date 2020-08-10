@@ -1,14 +1,13 @@
+import logging
 import boto3
 from botocore.exceptions import ClientError
-import datetime
-import logging
 
 
 class ParameterStore:
     def __init__(self, default_region='eu-west-1'):
         self._client = boto3.client('ssm', region_name=default_region)
 
-    def get_param(self, parameter_name, default=None):
+    def get_param(self, parameter_name, *default_value):
         try:
             value = self._client.get_parameter(Name=parameter_name, WithDecryption=True)['Parameter']['Value']
 
@@ -20,4 +19,8 @@ class ParameterStore:
             return value
 
         except ClientError:
-            return default
+            if not default_value:
+                logging.error(' ClientError: Missing parameter: "{}" and default value'.format(parameter_name))
+                return
+
+            return default_value
