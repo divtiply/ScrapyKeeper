@@ -23,4 +23,4 @@ class ParameterStore:
                 logging.error(' ClientError: Missing parameter: "{}" and default value'.format(parameter_name))
                 return
 
-            return default_value
+            return default_value[0]
