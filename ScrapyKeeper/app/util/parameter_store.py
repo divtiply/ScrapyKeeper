@@ -1,4 +1,3 @@
-import logging
 import boto3
 from botocore.exceptions import ClientError
 
@@ -20,7 +19,6 @@ class ParameterStore:
 
         except ClientError:
             if not default_value:
-                logging.error(' ClientError: Missing parameter: "{}" and default value'.format(parameter_name))
-                return
+                raise ValueError('Missing parameter: "{}" and default value'.format(parameter_name))
 
             return default_value[0]
