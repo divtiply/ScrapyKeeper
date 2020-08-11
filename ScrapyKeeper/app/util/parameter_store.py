@@ -10,10 +10,8 @@ class ParameterStore:
         try:
             value = self._client.get_parameter(Name=parameter_name, WithDecryption=True)['Parameter']['Value']
 
-            if value == 'None':
+            if value == 'None' or value == "''":
                 return None
-            elif value == '\'\'':
-                return ''
 
             return value
 
